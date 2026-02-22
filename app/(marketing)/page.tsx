@@ -12,7 +12,7 @@ const tools = [
   {
     title: "Proofreader",
     description:
-      "Catch grammar errors without changing your style. Paste text, see a diff.",
+      "Catch grammar errors without changing your style. Paste text, see a difference. Supports most languages.",
     href: "/proofread",
     icon: PenTool,
   },
