@@ -1,17 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const error = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
-  const origin = requestUrl.origin;
 
   if (error) {
     console.error("Auth error:", error, errorDescription);
-    return NextResponse.redirect(
-      `${origin}/proofread?auth_error=${encodeURIComponent(errorDescription || error)}`
+    redirect(
+      `/proofread?auth_error=${encodeURIComponent(errorDescription || error)}`
     );
   }
 
@@ -23,17 +22,17 @@ export async function GET(request: Request) {
 
       if (sessionError) {
         console.error("Session exchange error:", sessionError);
-        return NextResponse.redirect(
-          `${origin}/proofread?auth_error=${encodeURIComponent(sessionError.message)}`
+        redirect(
+          `/proofread?auth_error=${encodeURIComponent(sessionError.message)}`
         );
       }
     } catch (err) {
+      // redirect() throws internally — rethrow it
+      if (err instanceof Error && err.message === "NEXT_REDIRECT") throw err;
       console.error("Unexpected error during auth callback:", err);
-      return NextResponse.redirect(
-        `${origin}/proofread?auth_error=Authentication%20failed`
-      );
+      redirect("/proofread?auth_error=Authentication%20failed");
     }
   }
 
-  return NextResponse.redirect(`${origin}/proofread`);
+  redirect("/proofread");
 }

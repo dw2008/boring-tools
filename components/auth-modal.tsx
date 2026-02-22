@@ -27,12 +27,16 @@ export function AuthModal({
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+    if (error) {
+      console.error("OAuth error:", error);
+      setIsLoading(false);
+    }
   };
 
   return (
