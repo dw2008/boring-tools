@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wrench, PenTool } from "lucide-react";
+import { UserMenu } from "@/components/user-menu";
 
 export function Header() {
   return (
@@ -17,6 +18,7 @@ export function Header() {
             <PenTool className="h-4 w-4" />
             Proofread
           </Link>
+          <UserMenu />
         </nav>
       </div>
     </header>
