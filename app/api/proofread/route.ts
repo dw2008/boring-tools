@@ -13,7 +13,7 @@ const requestSchema = z.object({
 });
 
 const PLAN_LIMITS: Record<string, number> = {
-  free: 5,
+  free: Infinity,
   basic: 200,
   pro: Infinity,
 };
