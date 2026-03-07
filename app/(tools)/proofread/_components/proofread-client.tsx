@@ -1,26 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { AuthModal } from "@/components/auth-modal";
+import { detectGibberish } from "@/lib/tools/proofread/gibberish";
 import type { ProofreadResponse } from "@/lib/types";
 import { ProofreadInput } from "./proofread-input";
 import { ProofreadResult } from "./proofread-result";
-
-const FREE_LIMIT = 3;
-const STORAGE_KEY = "proofread_count";
-
-function getUsageCount(): number {
-  if (typeof window === "undefined") return 0;
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? parseInt(stored, 10) || 0 : 0;
-}
-
-function incrementUsageCount(): number {
-  const count = getUsageCount() + 1;
-  localStorage.setItem(STORAGE_KEY, String(count));
-  return count;
-}
 
 export function ProofreadClient() {
   const { user } = useAuth();
@@ -28,14 +14,10 @@ export function ProofreadClient() {
   const [result, setResult] = useState<ProofreadResponse | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [usageCount, setUsageCount] = useState(0);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-
-  useEffect(() => {
-    setUsageCount(getUsageCount());
-  }, []);
-
-  const remaining = FREE_LIMIT - usageCount;
+  const [authModalTrigger, setAuthModalTrigger] = useState<
+    "usage-limit" | "manual"
+  >("manual");
 
   const handleChange = (text: string) => {
     setInput(text);
@@ -46,8 +28,25 @@ export function ProofreadClient() {
   const handleProofread = async () => {
     if (!input.trim()) return;
 
-    if (!user && usageCount >= FREE_LIMIT) {
+    // Require sign-in before proofreading
+    if (!user) {
+      setAuthModalTrigger("manual");
       setAuthModalOpen(true);
+      return;
+    }
+
+    // Run gibberish detection before calling the API
+    const gibberish = detectGibberish(input);
+
+    if (gibberish.isFullyGibberish) {
+      // Skip API call entirely — show result with yellow highlighting
+      setResult({
+        original: input,
+        fixed: input,
+        hasChanges: false,
+        gibberishRanges: gibberish.ranges,
+        isFullyGibberish: true,
+      });
       return;
     }
 
@@ -63,16 +62,35 @@ export function ProofreadClient() {
 
       if (!response.ok) {
         const data = await response.json();
+
+        if (response.status === 401) {
+          setAuthModalTrigger("manual");
+          setAuthModalOpen(true);
+          return;
+        }
+
+        if (response.status === 403) {
+          setAuthModalTrigger("usage-limit");
+          setAuthModalOpen(true);
+          return;
+        }
+
+        if (response.status === 429) {
+          setError("Too many requests. Please slow down and try again shortly.");
+          return;
+        }
+
         throw new Error(data.error || "Something went wrong");
       }
 
       const data: ProofreadResponse = await response.json();
-      setResult(data);
 
-      if (!user) {
-        const newCount = incrementUsageCount();
-        setUsageCount(newCount);
+      // Attach gibberish ranges to the result for partial highlighting
+      if (gibberish.ranges.length > 0) {
+        data.gibberishRanges = gibberish.ranges;
       }
+
+      setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -88,16 +106,18 @@ export function ProofreadClient() {
         onSubmit={handleProofread}
         isProcessing={isProcessing}
       />
-      {!user && usageCount > 0 && usageCount < FREE_LIMIT && (
+      {!user && (
         <p className="text-sm text-muted-foreground text-center">
-          {remaining} free proofread{remaining === 1 ? "" : "s"} remaining.{" "}
           <button
-            onClick={() => setAuthModalOpen(true)}
+            onClick={() => {
+              setAuthModalTrigger("manual");
+              setAuthModalOpen(true);
+            }}
             className="underline hover:text-foreground transition-colors"
           >
             Sign in
           </button>{" "}
-          for unlimited access.
+          to use the proofreader.
         </p>
       )}
       {error && (
@@ -107,7 +127,7 @@ export function ProofreadClient() {
       <AuthModal
         open={authModalOpen}
         onOpenChange={setAuthModalOpen}
-        trigger="usage-limit"
+        trigger={authModalTrigger}
       />
     </div>
   );

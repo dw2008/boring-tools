@@ -6,4 +6,6 @@ export interface ProofreadResponse {
   original: string;
   fixed: string;
   hasChanges: boolean;
+  gibberishRanges?: { start: number; end: number }[];
+  isFullyGibberish?: boolean;
 }

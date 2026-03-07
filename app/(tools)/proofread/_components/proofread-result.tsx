@@ -20,7 +20,29 @@ export function ProofreadResult({ result }: ProofreadResultProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!result.hasChanges) {
+  const hasGibberish =
+    result.gibberishRanges && result.gibberishRanges.length > 0;
+
+  if (result.isFullyGibberish) {
+    return (
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Card className="bg-yellow-50 border-yellow-200">
+          <CardContent className="p-6">
+            <DiffView
+              original={result.original}
+              fixed={result.fixed}
+              gibberishRanges={result.gibberishRanges}
+            />
+            <p className="text-yellow-800 text-sm mt-3 text-center">
+              This text appears to be gibberish — no corrections were made.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!result.hasChanges && !hasGibberish) {
     return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
         <Card className="bg-muted/20">
@@ -63,9 +85,26 @@ export function ProofreadResult({ result }: ProofreadResultProps) {
 
       <Card className="bg-muted/20 border-green-200/50 overflow-hidden">
         <CardContent className="p-6">
-          <DiffView original={result.original} fixed={result.fixed} />
+          <DiffView
+            original={result.original}
+            fixed={result.fixed}
+            gibberishRanges={result.gibberishRanges}
+          />
         </CardContent>
       </Card>
+
+      {hasGibberish && (
+        <p className="text-xs text-muted-foreground text-center">
+          <span className="inline-block w-3 h-3 bg-red-100 rounded-sm align-middle mr-1 border border-red-200" />
+          <span className="line-through">Red strikethrough</span> = removed
+          {" | "}
+          <span className="inline-block w-3 h-3 bg-green-100 rounded-sm align-middle mr-1 border border-green-200" />
+          Green = added
+          {" | "}
+          <span className="inline-block w-3 h-3 bg-yellow-100 rounded-sm align-middle mr-1 border border-yellow-200" />
+          Yellow = unrecognized text (not proofread)
+        </p>
+      )}
     </div>
   );
 }

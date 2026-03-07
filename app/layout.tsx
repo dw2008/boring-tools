@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "@/contexts/auth-context";
@@ -38,6 +39,10 @@ export default function RootLayout({
             <Footer />
           </div>
         </AuthProvider>
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="afterInteractive"
+        />
         <Analytics />
       </body>
     </html>

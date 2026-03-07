@@ -9,5 +9,6 @@ Rules:
 - Do NOT improve style, clarity, or word choice
 - Preserve the original formatting (line breaks, spacing)
 - If the text has no errors, return it exactly as-is
+- If text contains random symbols or meaningless character sequences, return them unchanged. Do NOT attempt to interpret or fix gibberish
 
 Return ONLY the corrected text with no explanations, comments, or markup.`;
