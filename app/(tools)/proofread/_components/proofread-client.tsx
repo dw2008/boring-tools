@@ -15,6 +15,7 @@ export function ProofreadClient() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [limitReached, setLimitReached] = useState(false);
   const [authModalTrigger, setAuthModalTrigger] = useState<
     "usage-limit" | "manual"
   >("manual");
@@ -70,8 +71,7 @@ export function ProofreadClient() {
         }
 
         if (response.status === 403) {
-          setAuthModalTrigger("usage-limit");
-          setAuthModalOpen(true);
+          setLimitReached(true);
           return;
         }
 
@@ -122,6 +122,18 @@ export function ProofreadClient() {
       )}
       {error && (
         <p className="text-sm text-destructive text-center">{error}</p>
+      )}
+      {limitReached && (
+        <p className="text-sm text-muted-foreground text-center">
+          You&apos;ve reached your monthly limit.{" "}
+          <a
+            href="/billing"
+            className="underline hover:text-foreground transition-colors"
+          >
+            Upgrade your plan
+          </a>{" "}
+          for more proofreads.
+        </p>
       )}
       {result && <ProofreadResult result={result} />}
       <AuthModal

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wrench, PenTool } from "lucide-react";
+import { PenTool } from "lucide-react";
 import { UserMenu } from "@/components/user-menu";
 
 export function Header() {
@@ -7,7 +7,8 @@ export function Header() {
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-          <Wrench className="h-5 w-5" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="boringtools" className="h-5 w-5 rounded" />
           <span>boringtools</span>
         </Link>
         <nav className="flex items-center gap-4">

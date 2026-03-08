@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut } from "lucide-react";
+import { CreditCard, LogOut } from "lucide-react";
 
 export function UserMenu() {
   const { user, loading, signOut } = useAuth();
@@ -70,6 +70,12 @@ export function UserMenu() {
           <p className="text-xs text-muted-foreground truncate">{email}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <a href="/billing">
+            <CreditCard className="mr-2 h-4 w-4" />
+            Billing
+          </a>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={signOut}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign out

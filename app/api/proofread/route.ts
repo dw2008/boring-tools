@@ -3,6 +3,7 @@ import { z } from "zod";
 import { proofreadText } from "@/lib/ai/client";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { PLAN_LIMITS } from "@/lib/stripe/plans";
 import type { ProofreadResponse } from "@/lib/types";
 
 const requestSchema = z.object({
@@ -11,12 +12,6 @@ const requestSchema = z.object({
     .min(1, "Text is required")
     .max(10_000, "Text must be 10,000 characters or fewer"),
 });
-
-const PLAN_LIMITS: Record<string, number> = {
-  free: Infinity,
-  basic: 200,
-  pro: Infinity,
-};
 
 const RATE_LIMIT_PER_MINUTE = 20;
 
@@ -73,17 +68,33 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Check monthly usage against plan limit
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    // 4. Look up user's plan from profiles table
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("subscription_tier, current_period_start")
+      .eq("id", user.id)
+      .single();
+
+    const userPlan = profile?.subscription_tier ?? "free";
+    const limit = PLAN_LIMITS[userPlan] ?? PLAN_LIMITS.free;
+
+    console.log("Profile lookup:", { userId: user.id, profile, userPlan, limit });
+
+    // Use subscription period start for paid users, calendar month for free
+    const periodStart = new Date();
+    if (userPlan !== "free" && profile?.current_period_start) {
+      periodStart.setTime(new Date(profile.current_period_start).getTime());
+    } else {
+      periodStart.setDate(1);
+      periodStart.setHours(0, 0, 0, 0);
+    }
 
     const { count: monthlyCount, error: usageError } = await admin
       .from("tool_usage")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("tool", "proofread")
-      .gte("created_at", startOfMonth.toISOString());
+      .gte("created_at", periodStart.toISOString());
 
     if (usageError) {
       console.error("Usage check error:", usageError);
@@ -92,10 +103,6 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-
-    // TODO: Look up user's actual plan from a profiles/subscriptions table
-    const userPlan = "free";
-    const limit = PLAN_LIMITS[userPlan] ?? PLAN_LIMITS.free;
 
     if ((monthlyCount ?? 0) >= limit) {
       return NextResponse.json(
