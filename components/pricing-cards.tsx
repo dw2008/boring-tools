@@ -62,13 +62,14 @@ interface PricingCardsProps {
 }
 
 export function PricingCards({ currentTier: initialTier }: PricingCardsProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [currentTier, setCurrentTier] = useState(initialTier);
   const [loadingTier, setLoadingTier] = useState(!initialTier);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       setCurrentTier(undefined);
       setLoadingTier(false);
@@ -85,7 +86,7 @@ export function PricingCards({ currentTier: initialTier }: PricingCardsProps) {
         setCurrentTier(data?.subscription_tier ?? "free");
         setLoadingTier(false);
       });
-  }, [user]);
+  }, [user, authLoading]);
 
   const isSubscribed = currentTier === "basic" || currentTier === "pro";
   const currentRank = TIER_RANK[currentTier ?? "free"] ?? 0;
