@@ -23,6 +23,7 @@ interface Plan {
   description: string;
   features: string[];
   highlight?: boolean;
+  badge?: string;
 }
 
 const plans: Plan[] = [
@@ -41,7 +42,6 @@ const plans: Plan[] = [
     period: "/month",
     description: "For regular use",
     features: ["200 proofreads per month", "Grammar & style fixes"],
-    highlight: true,
   },
   {
     name: "Pro",
@@ -50,6 +50,8 @@ const plans: Plan[] = [
     period: "/month",
     description: "Unlimited access",
     features: ["Unlimited proofreads", "Grammar & style fixes"],
+    highlight: true,
+    badge: "Best value",
   },
 ];
 
@@ -142,7 +144,14 @@ export function PricingCards({ currentTier: initialTier }: PricingCardsProps) {
               className={plan.highlight ? "border-primary shadow-md" : ""}
             >
               <CardHeader>
-                <CardTitle className="text-lg">{plan.name}</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{plan.name}</CardTitle>
+                  {plan.badge && (
+                    <span className="text-xs font-medium bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                      {plan.badge}
+                    </span>
+                  )}
+                </div>
                 <CardDescription>{plan.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
