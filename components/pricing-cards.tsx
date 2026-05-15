@@ -33,7 +33,7 @@ const plans: Plan[] = [
     price: "$0",
     period: "",
     description: "Try it out",
-    features: ["5 proofreads per month", "Grammar & style fixes"],
+    features: ["5 proofreads per month", "3 interview sessions per month", "Grammar & style fixes"],
   },
   {
     name: "Basic",
@@ -41,7 +41,7 @@ const plans: Plan[] = [
     price: "$1.99",
     period: "/month",
     description: "For regular use",
-    features: ["200 proofreads per month", "Grammar & style fixes"],
+    features: ["200 proofreads per month", "50 interview sessions per month", "Grammar & style fixes"],
   },
   {
     name: "Pro",
@@ -49,7 +49,7 @@ const plans: Plan[] = [
     price: "$5.99",
     period: "/month",
     description: "Unlimited access",
-    features: ["Unlimited proofreads", "Grammar & style fixes"],
+    features: ["Unlimited proofreads", "Unlimited interview sessions", "Grammar & style fixes"],
     highlight: true,
     badge: "Best value",
   },
