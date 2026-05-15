@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { ProofreadResponse } from "@/lib/types";
+import type { ProofreadResponse } from "@/lib/tools/proofread/types";
 import { DiffView } from "./diff-view";
 
 interface ProofreadResultProps {

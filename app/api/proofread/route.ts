@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { proofreadText } from "@/lib/ai/client";
+import { proofreadText } from "@/lib/tools/proofread/ai";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PLAN_LIMITS } from "@/lib/stripe/plans";
-import type { ProofreadResponse } from "@/lib/types";
+import type { ProofreadResponse } from "@/lib/tools/proofread/types";
 
 const requestSchema = z.object({
   text: z
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       .single();
 
     const userPlan = profile?.subscription_tier ?? "free";
-    const limit = PLAN_LIMITS[userPlan] ?? PLAN_LIMITS.free;
+    const limit = PLAN_LIMITS["proofread"]?.[userPlan] ?? PLAN_LIMITS["proofread"].free;
 
     console.log("Profile lookup:", { userId: user.id, profile, userPlan, limit });
 

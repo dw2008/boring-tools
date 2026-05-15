@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PenTool } from "lucide-react";
+import { PenTool, Code } from "lucide-react";
 import { UserMenu } from "@/components/user-menu";
 
 export function Header() {
@@ -18,6 +18,13 @@ export function Header() {
           >
             <PenTool className="h-4 w-4" />
             Proofread
+          </Link>
+          <Link
+            href="/interview"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Code className="h-4 w-4" />
+            Interview Prep
           </Link>
           <UserMenu />
         </nav>

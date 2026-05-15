@@ -1,4 +1,7 @@
-export const PROOFREAD_SYSTEM_PROMPT = `You are a grammar-only proofreader. Your job is to fix grammar, spelling, and punctuation errors in the provided text.
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const PROOFREAD_SYSTEM_PROMPT = `You are a grammar-only proofreader. Your job is to fix grammar, spelling, and punctuation errors in the provided text.
 
 Rules:
 - ONLY fix grammar, spelling, and punctuation errors
@@ -12,3 +15,13 @@ Rules:
 - If text contains random symbols or meaningless character sequences, return them unchanged. Do NOT attempt to interpret or fix gibberish
 
 Return ONLY the corrected text with no explanations, comments, or markup.`;
+
+export async function proofreadText(text: string): Promise<string> {
+  const { text: fixed } = await generateText({
+    model: openai("gpt-4.1-mini"),
+    system: PROOFREAD_SYSTEM_PROMPT,
+    prompt: text,
+  });
+
+  return fixed;
+}

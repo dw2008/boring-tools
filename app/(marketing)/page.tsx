@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PenTool, ArrowRight } from "lucide-react";
+import { PenTool, Code, ArrowRight } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -15,6 +15,13 @@ const tools = [
       "Catch grammar errors without changing your style. Paste text, see a difference. Supports most languages.",
     href: "/proofread",
     icon: PenTool,
+  },
+  {
+    title: "Interview Prep",
+    description:
+      "Practice coding interviews with an AI coach. Work through problems step-by-step using the UMPIRE framework.",
+    href: "/interview",
+    icon: Code,
   },
 ];
 

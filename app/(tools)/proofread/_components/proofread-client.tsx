@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { AuthModal } from "@/components/auth-modal";
 import { detectGibberish } from "@/lib/tools/proofread/gibberish";
-import type { ProofreadResponse } from "@/lib/types";
+import type { ProofreadResponse } from "@/lib/tools/proofread/types";
 import { ProofreadInput } from "./proofread-input";
 import { ProofreadResult } from "./proofread-result";
 
