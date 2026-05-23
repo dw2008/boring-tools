@@ -153,9 +153,9 @@ export default function Board() {
             options={{
               position: fen,
               onPieceDrop,
-              darkSquareStyle: { backgroundColor: '#1B242D' },
-              lightSquareStyle: { backgroundColor: '#2D3E50' },
-              dropSquareStyle: { backgroundColor: '#34D8C8', opacity: 0.4 },
+              darkSquareStyle: { backgroundColor: '#1E2D3D' },
+              lightSquareStyle: { backgroundColor: '#3B5268' },
+              dropSquareStyle: { backgroundColor: '#34D8C8', opacity: 0.35 },
               arrows: bestMoveVisible && bestMove && bestMove !== '(none)'
                 ? [{ startSquare: bestMove.slice(0, 2), endSquare: bestMove.slice(2, 4), color: '#34D8C8' }]
                 : [],

@@ -5,20 +5,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '#0B1014',
-        surface: '#141B22',
-        'surface-elevated': '#1B242D',
-        divider: '#1F2A35',
-        'text-primary': '#E6EEF5',
-        'text-muted': '#8A99A8',
+        background: '#18181B',
+        surface: '#1F1F23',
+        'surface-elevated': '#27272A',
+        divider: 'rgba(255,255,255,0.08)',
+        'text-primary': '#FAFAFA',
+        'text-muted': '#A1A1AA',
         accent: '#34D8C8',
-        danger: '#E5575A',
+        danger: '#F87171',
       },
       fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['ui-monospace', 'JetBrains Mono', 'monospace'],
-      },
-      spacing: {
-        // 4px base unit — Tailwind default is already 4px, just documenting
       },
     },
   },

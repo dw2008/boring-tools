@@ -26,9 +26,9 @@ export default function EvalBar({ evalCp }: Props) {
   return (
     <div className="flex flex-col items-center gap-1 w-5 self-stretch">
       {/* Bar — black on top, white on bottom (board orientation) */}
-      <div className="relative flex-1 w-full rounded overflow-hidden bg-[#E6EEF5]">
+      <div className="relative flex-1 w-full rounded overflow-hidden bg-[#FAFAFA]">
         <div
-          className="absolute top-0 left-0 w-full bg-[#141B22] transition-all duration-300"
+          className="absolute top-0 left-0 w-full bg-[#18181B] transition-all duration-300"
           style={{ height: blackPercent }}
         />
       </div>

@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import Sidebar from './components/Sidebar/Sidebar'
 import Board from './components/Board/Board'
 import PostGame from './components/PostGame/PostGame'
 import AssistantPanel from './components/AssistantPanel/AssistantPanel'
@@ -31,8 +30,6 @@ export default function App() {
 
   return (
     <div className="flex h-full bg-background text-text-primary overflow-hidden">
-      <Sidebar activeNav="Play" />
-
       <main className="flex flex-1 items-center justify-center min-w-0 bg-background overflow-hidden">
         {isGameOver ? <PostGame /> : <Board />}
       </main>

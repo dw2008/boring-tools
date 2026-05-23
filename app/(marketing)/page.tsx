@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PenTool, Code, ArrowRight } from "lucide-react";
+import { PenTool, Code, Crown, ArrowRight } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -22,6 +22,13 @@ const tools = [
       "Practice coding interviews with an AI coach. Work through problems step-by-step using the UMPIRE framework.",
     href: "/interview",
     icon: Code,
+  },
+  {
+    title: "Chess",
+    description:
+      "Play chess against an AI engine with real-time strategic commentary and post-game analysis.",
+    href: "/chess",
+    icon: Crown,
   },
 ];
 

@@ -170,7 +170,7 @@ export default function AssistantPanel() {
           <button
             className="text-[11px] font-mono rounded px-2 py-1 transition-colors border disabled:opacity-30 disabled:cursor-not-allowed"
             style={bestMoveVisible
-              ? { color: '#34D8C8', borderColor: '#34D8C8', backgroundColor: 'rgba(52,216,200,0.15)' }
+              ? { color: '#34D8C8', borderColor: '#34D8C8', backgroundColor: 'rgba(52,216,200,0.12)' }
               : { color: '#34D8C8', borderColor: 'rgba(52,216,200,0.4)' }
             }
             onClick={flashBestMove}
@@ -231,13 +231,13 @@ function CommentaryCard({ move, moveIndex }: { move: MoveRecord; moveIndex: numb
     <div className="bg-surface-elevated rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b border-divider/50">
         <div className="flex items-center gap-2">
-          <span className={`w-1.5 h-1.5 rounded-full ${isWhite ? 'bg-[#E6EEF5]' : 'bg-[#141B22] border border-text-muted'}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${isWhite ? 'bg-white' : 'bg-[#3a3a3a] border border-white/20'}`} />
           <span className="text-[12px] font-mono font-semibold text-text-primary">{moveLabel}</span>
           <span className="text-[10px] text-text-muted font-mono">{isWhite ? 'White' : 'Black'}</span>
         </div>
         {evalLabel && (
           <span className={`text-[11px] font-mono tabular-nums ${
-            move.evalCp !== null && move.evalCp > 0 ? 'text-[#E6EEF5]'
+            move.evalCp !== null && move.evalCp > 0 ? 'text-accent'
             : move.evalCp !== null && move.evalCp < 0 ? 'text-danger'
             : 'text-text-muted'
           }`}>
