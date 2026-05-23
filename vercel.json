@@ -1,0 +1,3 @@
+{
+  "buildCommand": "cd chess && npm install && npm run build && mkdir -p ../public/chess-app && cp -r dist/. ../public/chess-app/ && cd .. && next build"
+}

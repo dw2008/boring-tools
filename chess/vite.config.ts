@@ -7,6 +7,7 @@ const coopCoepHeaders = {
 }
 
 export default defineConfig({
+  base: process.env.NODE_ENV === 'production' ? '/chess-app/' : '/',
   plugins: [
     react(),
     {

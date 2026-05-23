@@ -30,7 +30,7 @@ export class StockfishEngine {
     if (this.initPromise) return this.initPromise
 
     this.initPromise = new Promise<void>((resolve, reject) => {
-      const worker = new Worker('/stockfish.js')
+      const worker = new Worker(`${import.meta.env.BASE_URL}stockfish.js`)
       this.worker = worker
 
       const timeout = setTimeout(() => {
