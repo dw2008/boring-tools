@@ -11,7 +11,6 @@ export default function AssistantPanel() {
   const engine = useGameStore((s) => s.engine)
   const history = useGameStore((s) => s.history)
   const status = useGameStore((s) => s.status)
-  const chess = useGameStore((s) => s.chess)
   const fen = useGameStore((s) => s.fen)
   const resignGame = useGameStore((s) => s.resignGame)
   const takebackMove = useGameStore((s) => s.takebackMove)
@@ -44,16 +43,6 @@ export default function AssistantPanel() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chat])
-
-  // --- Meters ---
-  const legalMoves = chess.moves().length
-  const complexityPct = Math.min(100, Math.round((legalMoves / 40) * 100))
-  const inCheck = chess.inCheck()
-  const evalCp = engine.evalCp ?? 0
-  const isPlayerTurn = fen.split(' ')[1] === 'w'
-  let threatPct = 0
-  if (inCheck) threatPct = 100
-  else if (isPlayerTurn) threatPct = evalCp < 0 ? Math.min(100, Math.round((-evalCp / 300) * 100)) : 0
 
   async function sendChat() {
     const text = chatInput.trim()
@@ -93,13 +82,6 @@ export default function AssistantPanel() {
         </span>
       </div>
 
-      {/* Meters */}
-      {history.length > 0 && (
-        <div className="px-4 py-2 border-b border-divider space-y-1.5 shrink-0">
-          <Meter label="Threat" value={threatPct} color={threatPct > 60 ? '#E5575A' : threatPct > 30 ? '#f59e0b' : '#34D8C8'} />
-          <Meter label="Complexity" value={complexityPct} color="#34D8C8" />
-        </div>
-      )}
 
       {/* Tabs */}
       <div className="flex border-b border-divider shrink-0">
@@ -122,10 +104,10 @@ export default function AssistantPanel() {
             ) : (
               history.map((move, i) => <CommentaryCard key={i} move={move} moveIndex={i} />)
             )}
-            {(status === 'checkmate' || status === 'draw' || status === 'resigned' || status === 'timeout') && (
+            {(status === 'checkmate' || status === 'draw' || status === 'resigned') && (
               <div className="bg-surface-elevated border border-accent/30 rounded p-3 text-center mt-2">
                 <p className="text-[13px] text-accent font-semibold">
-                  {status === 'checkmate' ? 'Checkmate' : status === 'draw' ? 'Draw' : status === 'timeout' ? 'Time out' : 'Resigned'}
+                  {status === 'checkmate' ? 'Checkmate' : status === 'draw' ? 'Draw' : 'Resigned'}
                 </p>
               </div>
             )}
@@ -238,20 +220,6 @@ function TabButton({ label, active, onClick, badge }: {
   )
 }
 
-function Meter({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] font-mono text-text-muted uppercase w-20 shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${value}%`, backgroundColor: color }}
-        />
-      </div>
-      <span className="text-[10px] font-mono text-text-muted w-8 text-right">{value}%</span>
-    </div>
-  )
-}
 
 function CommentaryCard({ move, moveIndex }: { move: MoveRecord; moveIndex: number }) {
   const fullMoveNumber = Math.floor(moveIndex / 2) + 1

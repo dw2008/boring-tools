@@ -14,8 +14,7 @@ export default function App() {
   const isGameOver =
     status === 'checkmate' ||
     status === 'draw' ||
-    status === 'resigned' ||
-    status === 'timeout'
+    status === 'resigned'
 
   // Trigger post-game digest once when the game ends
   useEffect(() => {

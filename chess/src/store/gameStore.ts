@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { Chess } from 'chess.js'
 import type { Square } from 'chess.js'
 
-export type GameStatus = 'idle' | 'playing' | 'checkmate' | 'draw' | 'resigned' | 'timeout'
+export type GameStatus = 'idle' | 'playing' | 'checkmate' | 'draw' | 'resigned'
 
 export type MoveRecord = {
   san: string
@@ -42,9 +42,8 @@ export type EngineState = {
 }
 
 export type ClockState = {
-  white: number   // seconds remaining
-  black: number
-  active: 'w' | 'b' | null
+  elapsed: number  // seconds the player has spent thinking (counts up)
+  running: boolean
 }
 
 export type ChatMessage = {
@@ -53,8 +52,6 @@ export type ChatMessage = {
   text: string
   streaming: boolean
 }
-
-const DEFAULT_CLOCK = 10 * 60 // 10 minutes
 
 type GameStore = {
   chess: Chess
@@ -84,7 +81,6 @@ type GameStore = {
   finalizeDigest: () => void
   // Clock
   tickClock: () => void
-  switchClock: (activeColor: 'w' | 'b' | null) => void
   // Chat
   addUserMessage: (text: string) => string
   addAssistantMessage: () => string
@@ -103,9 +99,8 @@ const initialEngineState: EngineState = {
 }
 
 const initialClock: ClockState = {
-  white: DEFAULT_CLOCK,
-  black: DEFAULT_CLOCK,
-  active: null,
+  elapsed: 0,
+  running: false,
 }
 
 function extractKeyMoments(history: MoveRecord[]): KeyMoment[] {
@@ -173,12 +168,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         history: [...state.history, record],
         status,
         engine: { ...initialEngineState },
-        // Start clock on first move, switch on each subsequent move
+        // Run player clock only when it's the player's (white's) turn
         clock: {
           ...state.clock,
-          active: status === 'playing' ? sideToMove : null,
-          white: state.clock.white,
-          black: state.clock.black,
+          running: status === 'playing' && sideToMove === 'w',
         },
       }))
 
@@ -191,7 +184,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   resignGame: () => {
     set((state) => ({
       status: 'resigned',
-      clock: { ...state.clock, active: null },
+      clock: { ...state.clock, running: false },
     }))
   },
 
@@ -222,7 +215,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       history: state.history.slice(0, -count),
       status: 'playing',
       engine: { ...initialEngineState },
-      clock: { ...state.clock, active: sideToMove },
+      clock: { ...state.clock, running: sideToMove === 'w' },
     }))
   },
 
@@ -291,7 +284,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const keyMoments = extractKeyMoments(history)
     set((state) => ({
       postGame: { keyMoments, digest: '', isGenerating: true },
-      clock: { ...state.clock, active: null },
+      clock: { ...state.clock, running: false },
     }))
   },
 
@@ -311,25 +304,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   tickClock: () => {
     set((state) => {
-      const { clock, status } = state
-      if (!clock.active || status !== 'playing') return state
-
-      const field = clock.active === 'w' ? 'white' : 'black'
-      const remaining = clock[field] - 1
-
-      if (remaining <= 0) {
-        return {
-          clock: { ...clock, [field]: 0, active: null },
-          status: 'timeout' as GameStatus,
-        }
-      }
-
-      return { clock: { ...clock, [field]: remaining } }
+      if (!state.clock.running || state.status !== 'playing') return state
+      return { clock: { ...state.clock, elapsed: state.clock.elapsed + 1 } }
     })
-  },
-
-  switchClock: (activeColor) => {
-    set((state) => ({ clock: { ...state.clock, active: activeColor } }))
   },
 
   addUserMessage: (text) => {
