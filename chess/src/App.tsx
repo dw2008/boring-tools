@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import Sidebar from './components/Sidebar/Sidebar'
 import Board from './components/Board/Board'
 import PostGame from './components/PostGame/PostGame'
@@ -9,15 +9,26 @@ export default function App() {
   const status = useGameStore((s) => s.status)
   const postGame = useGameStore((s) => s.postGame)
   const initPostGame = useGameStore((s) => s.initPostGame)
+  const tickClock = useGameStore((s) => s.tickClock)
 
-  const isGameOver = status === 'checkmate' || status === 'draw' || status === 'resigned'
+  const isGameOver =
+    status === 'checkmate' ||
+    status === 'draw' ||
+    status === 'resigned' ||
+    status === 'timeout'
 
   // Trigger post-game digest once when the game ends
   useEffect(() => {
-    if (isGameOver && !postGame) {
-      initPostGame()
-    }
+    if (isGameOver && !postGame) initPostGame()
   }, [isGameOver]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Game clock — tick every second
+  const tickRef = useRef(tickClock)
+  tickRef.current = tickClock
+  useEffect(() => {
+    const id = setInterval(() => tickRef.current(), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   return (
     <div className="flex h-full bg-background text-text-primary overflow-hidden">

@@ -24,6 +24,7 @@ export default function Board() {
   const engineEval = useGameStore((s) => s.engine.evalCp)
   const bestMove = useGameStore((s) => s.engine.bestMove)
   const bestMoveVisible = useGameStore((s) => s.bestMoveVisible)
+  const clock = useGameStore((s) => s.clock)
 
   const historyRef = useRef(history)
   historyRef.current = history
@@ -134,14 +135,14 @@ export default function Board() {
 
   return (
     <div className="flex flex-col items-center justify-center w-full h-full px-4">
-      <div className="flex items-center justify-between w-full max-w-[720px] mb-3 px-1">
+      {/* Black clock (top) */}
+      <ClockRow seconds={clock.black} active={clock.active === 'b'} label="Aether" />
+
+      <div className="flex items-center justify-between w-full max-w-[720px] my-2 px-1">
         <span className="text-[12px] text-text-muted font-mono uppercase tracking-widest">
           MATCH: <span className="text-text-primary">You vs Aether Engine</span>
         </span>
         <span className="text-[12px] text-text-muted font-mono">
-          {status === 'checkmate' && '♟ Checkmate'}
-          {status === 'draw' && '½ Draw'}
-          {status === 'resigned' && '⚑ Resigned'}
           {(status === 'playing' || status === 'idle') && (
             isEngineTurn ? '⏳ Engine thinking...' : '● Your move'
           )}
@@ -165,6 +166,25 @@ export default function Board() {
           />
         </div>
       </div>
+
+      {/* White clock (bottom) */}
+      <ClockRow seconds={clock.white} active={clock.active === 'w'} label="You" />
+    </div>
+  )
+}
+
+function ClockRow({ seconds, active, label }: { seconds: number; active: boolean; label: string }) {
+  const mins = Math.floor(seconds / 60).toString().padStart(2, '0')
+  const secs = (seconds % 60).toString().padStart(2, '0')
+  const isLow = seconds <= 30
+  return (
+    <div className="flex items-center justify-between w-full max-w-[720px] px-1 py-1">
+      <span className="text-[11px] text-text-muted font-mono">{label}</span>
+      <span className={`text-[13px] font-mono tabular-nums ${
+        isLow ? 'text-danger' : active ? 'text-text-primary' : 'text-text-muted'
+      } ${active ? 'font-semibold' : ''}`}>
+        {mins}:{secs}
+      </span>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { Chess } from 'chess.js'
 import type { Square } from 'chess.js'
 
-export type GameStatus = 'idle' | 'playing' | 'checkmate' | 'draw' | 'resigned'
+export type GameStatus = 'idle' | 'playing' | 'checkmate' | 'draw' | 'resigned' | 'timeout'
 
 export type MoveRecord = {
   san: string
@@ -41,6 +41,21 @@ export type EngineState = {
   isThinking: boolean
 }
 
+export type ClockState = {
+  white: number   // seconds remaining
+  black: number
+  active: 'w' | 'b' | null
+}
+
+export type ChatMessage = {
+  id: string
+  role: 'user' | 'assistant'
+  text: string
+  streaming: boolean
+}
+
+const DEFAULT_CLOCK = 10 * 60 // 10 minutes
+
 type GameStore = {
   chess: Chess
   fen: string
@@ -49,8 +64,9 @@ type GameStore = {
   playerColor: 'w' | 'b'
   engine: EngineState
   postGame: PostGameState | null
-
   bestMoveVisible: boolean
+  clock: ClockState
+  chat: ChatMessage[]
 
   applyMove: (args: { from: Square; to: Square; promotion?: string }) => boolean
   resignGame: () => void
@@ -66,6 +82,14 @@ type GameStore = {
   initPostGame: () => void
   appendDigest: (chunk: string) => void
   finalizeDigest: () => void
+  // Clock
+  tickClock: () => void
+  switchClock: (activeColor: 'w' | 'b' | null) => void
+  // Chat
+  addUserMessage: (text: string) => string
+  addAssistantMessage: () => string
+  appendChatChunk: (id: string, chunk: string) => void
+  finalizeChatMessage: (id: string) => void
 }
 
 const initialEngineState: EngineState = {
@@ -78,17 +102,20 @@ const initialEngineState: EngineState = {
   isThinking: false,
 }
 
+const initialClock: ClockState = {
+  white: DEFAULT_CLOCK,
+  black: DEFAULT_CLOCK,
+  active: null,
+}
+
 function extractKeyMoments(history: MoveRecord[]): KeyMoment[] {
   const moments: KeyMoment[] = []
-
   for (let i = 1; i < history.length; i++) {
     const before = history[i - 1].evalCp
     const after = history[i].evalCp
     if (before === null || after === null) continue
-
     const delta = Math.abs(after - before)
     if (delta < 100) continue
-
     moments.push({
       moveIndex: i,
       moveNumber: Math.floor(i / 2) + 1,
@@ -99,10 +126,11 @@ function extractKeyMoments(history: MoveRecord[]): KeyMoment[] {
       delta,
     })
   }
-
-  // Sort by largest swing, cap at 6
   return moments.sort((a, b) => b.delta - a.delta).slice(0, 6)
 }
+
+let msgCounter = 0
+function nextId() { return String(++msgCounter) }
 
 export const useGameStore = create<GameStore>((set, get) => ({
   chess: new Chess(),
@@ -113,6 +141,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   engine: initialEngineState,
   postGame: null,
   bestMoveVisible: false,
+  clock: initialClock,
+  chat: [],
 
   applyMove: ({ from, to, promotion }) => {
     const { chess } = get()
@@ -143,6 +173,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         history: [...state.history, record],
         status,
         engine: { ...initialEngineState },
+        // Start clock on first move, switch on each subsequent move
+        clock: {
+          ...state.clock,
+          active: status === 'playing' ? sideToMove : null,
+          white: state.clock.white,
+          black: state.clock.black,
+        },
       }))
 
       return true
@@ -152,30 +189,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   resignGame: () => {
-    set({ status: 'resigned' })
-  },
-
-  takebackMove: () => {
-    const { chess, history } = get()
-    if (history.length === 0) return
-
-    // Undo black's response + white's move, or just white's if engine hasn't replied yet
-    const movesToUndo = history[history.length - 1].movedBy === 'b' ? 2 : 1
-    const count = Math.min(movesToUndo, history.length)
-
-    for (let i = 0; i < count; i++) chess.undo()
-
     set((state) => ({
-      fen: chess.fen(),
-      history: state.history.slice(0, -count),
-      status: 'playing',
-      engine: { ...initialEngineState },
+      status: 'resigned',
+      clock: { ...state.clock, active: null },
     }))
-  },
-
-  flashBestMove: () => {
-    set({ bestMoveVisible: true })
-    setTimeout(() => set({ bestMoveVisible: false }), 3000)
   },
 
   resetGame: () => {
@@ -188,7 +205,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
       engine: initialEngineState,
       postGame: null,
       bestMoveVisible: false,
+      clock: initialClock,
+      chat: [],
     })
+  },
+
+  takebackMove: () => {
+    const { chess, history } = get()
+    if (history.length === 0) return
+    const movesToUndo = history[history.length - 1].movedBy === 'b' ? 2 : 1
+    const count = Math.min(movesToUndo, history.length)
+    for (let i = 0; i < count; i++) chess.undo()
+    const sideToMove = chess.fen().split(' ')[1] as 'w' | 'b'
+    set((state) => ({
+      fen: chess.fen(),
+      history: state.history.slice(0, -count),
+      status: 'playing',
+      engine: { ...initialEngineState },
+      clock: { ...state.clock, active: sideToMove },
+    }))
+  },
+
+  flashBestMove: () => {
+    set({ bestMoveVisible: true })
+    setTimeout(() => set({ bestMoveVisible: false }), 3000)
   },
 
   setEngineResult: (result) => {
@@ -249,7 +289,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   initPostGame: () => {
     const { history } = get()
     const keyMoments = extractKeyMoments(history)
-    set({ postGame: { keyMoments, digest: '', isGenerating: true } })
+    set((state) => ({
+      postGame: { keyMoments, digest: '', isGenerating: true },
+      clock: { ...state.clock, active: null },
+    }))
   },
 
   appendDigest: (chunk) => {
@@ -264,5 +307,60 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (!state.postGame) return state
       return { postGame: { ...state.postGame, isGenerating: false } }
     })
+  },
+
+  tickClock: () => {
+    set((state) => {
+      const { clock, status } = state
+      if (!clock.active || status !== 'playing') return state
+
+      const field = clock.active === 'w' ? 'white' : 'black'
+      const remaining = clock[field] - 1
+
+      if (remaining <= 0) {
+        return {
+          clock: { ...clock, [field]: 0, active: null },
+          status: 'timeout' as GameStatus,
+        }
+      }
+
+      return { clock: { ...clock, [field]: remaining } }
+    })
+  },
+
+  switchClock: (activeColor) => {
+    set((state) => ({ clock: { ...state.clock, active: activeColor } }))
+  },
+
+  addUserMessage: (text) => {
+    const id = nextId()
+    set((state) => ({
+      chat: [...state.chat, { id, role: 'user', text, streaming: false }],
+    }))
+    return id
+  },
+
+  addAssistantMessage: () => {
+    const id = nextId()
+    set((state) => ({
+      chat: [...state.chat, { id, role: 'assistant', text: '', streaming: true }],
+    }))
+    return id
+  },
+
+  appendChatChunk: (id, chunk) => {
+    set((state) => ({
+      chat: state.chat.map((m) =>
+        m.id === id ? { ...m, text: m.text + chunk } : m,
+      ),
+    }))
+  },
+
+  finalizeChatMessage: (id) => {
+    set((state) => ({
+      chat: state.chat.map((m) =>
+        m.id === id ? { ...m, streaming: false } : m,
+      ),
+    }))
   },
 }))

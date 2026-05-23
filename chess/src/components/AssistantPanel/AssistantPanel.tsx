@@ -1,35 +1,89 @@
-import { useEffect, useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import type { MoveRecord } from '../../store/gameStore'
+import { getChatResponse } from '../../lib/llm'
 
 const MATE_SENTINEL = 10_000
+
+type Tab = 'commentary' | 'chat'
 
 export default function AssistantPanel() {
   const engine = useGameStore((s) => s.engine)
   const history = useGameStore((s) => s.history)
   const status = useGameStore((s) => s.status)
-  const resetGame = useGameStore((s) => s.resetGame)
+  const chess = useGameStore((s) => s.chess)
+  const fen = useGameStore((s) => s.fen)
   const resignGame = useGameStore((s) => s.resignGame)
   const takebackMove = useGameStore((s) => s.takebackMove)
   const flashBestMove = useGameStore((s) => s.flashBestMove)
   const bestMoveVisible = useGameStore((s) => s.bestMoveVisible)
   const hasBestMove = useGameStore((s) => !!s.engine.bestMove && s.engine.bestMove !== '(none)')
+  const chat = useGameStore((s) => s.chat)
+  const addUserMessage = useGameStore((s) => s.addUserMessage)
+  const addAssistantMessage = useGameStore((s) => s.addAssistantMessage)
+  const appendChatChunk = useGameStore((s) => s.appendChatChunk)
+  const finalizeChatMessage = useGameStore((s) => s.finalizeChatMessage)
 
   const isAnalyzing = engine.isThinking
   const evalLabel = formatEval(engine.evalCp, engine.isMate, engine.mateIn)
 
+  const [tab, setTab] = useState<Tab>('commentary')
+  const [chatInput, setChatInput] = useState('')
+  const [chatBusy, setChatBusy] = useState(false)
   const feedRef = useRef<HTMLDivElement>(null)
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
-  // Scroll to bottom when new content arrives
+  // Auto-switch to chat tab when a new user message is sent
+  // Scroll commentary feed to bottom on new moves
   useEffect(() => {
     const el = feedRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [history])
+    if (el?.scrollTo) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }, [history.length])
+
+  // Scroll chat to bottom on new chunks
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chat])
+
+  // --- Meters ---
+  const legalMoves = chess.moves().length
+  const complexityPct = Math.min(100, Math.round((legalMoves / 40) * 100))
+  const inCheck = chess.inCheck()
+  const evalCp = engine.evalCp ?? 0
+  const isPlayerTurn = fen.split(' ')[1] === 'w'
+  let threatPct = 0
+  if (inCheck) threatPct = 100
+  else if (isPlayerTurn) threatPct = evalCp < 0 ? Math.min(100, Math.round((-evalCp / 300) * 100)) : 0
+
+  async function sendChat() {
+    const text = chatInput.trim()
+    if (!text || chatBusy) return
+    setChatInput('')
+    setChatBusy(true)
+    setTab('chat')
+
+    addUserMessage(text)
+    const assistantId = addAssistantMessage()
+
+    try {
+      const recentMoves = history.slice(-6).map((m) => m.san)
+      await getChatResponse(
+        { fen, engineEval: engine.evalCp, recentMoves, question: text },
+        (chunk) => appendChatChunk(assistantId, chunk),
+      )
+    } catch (err) {
+      console.error('[Aether] Chat error:', err)
+      appendChatChunk(assistantId, '(error — check console)')
+    } finally {
+      finalizeChatMessage(assistantId)
+      setChatBusy(false)
+    }
+  }
 
   return (
     <aside className="flex flex-col w-[380px] shrink-0 bg-surface border-l border-divider h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-divider">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-divider shrink-0">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${isAnalyzing ? 'bg-accent animate-pulse' : 'bg-text-muted'}`} />
           <span className="text-[13px] font-semibold text-text-primary">Aether Assistant</span>
@@ -39,39 +93,96 @@ export default function AssistantPanel() {
         </span>
       </div>
 
-      {/* Feed */}
-      <div ref={feedRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
-        {history.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-[12px] text-text-muted text-center">
-              Strategic insights will appear here after each move.
-            </p>
+      {/* Meters */}
+      {history.length > 0 && (
+        <div className="px-4 py-2 border-b border-divider space-y-1.5 shrink-0">
+          <Meter label="Threat" value={threatPct} color={threatPct > 60 ? '#E5575A' : threatPct > 30 ? '#f59e0b' : '#34D8C8'} />
+          <Meter label="Complexity" value={complexityPct} color="#34D8C8" />
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex border-b border-divider shrink-0">
+        <TabButton label="Commentary" active={tab === 'commentary'} onClick={() => setTab('commentary')}
+          badge={history.length > 0 ? history.length : undefined} />
+        <TabButton label="Ask Aether" active={tab === 'chat'} onClick={() => setTab('chat')}
+          badge={chat.filter((m) => m.role === 'user').length || undefined} />
+      </div>
+
+      {/* Tab content */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        {tab === 'commentary' ? (
+          <div ref={feedRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+            {history.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-[12px] text-text-muted text-center">
+                  Move commentary will appear here after each move.
+                </p>
+              </div>
+            ) : (
+              history.map((move, i) => <CommentaryCard key={i} move={move} moveIndex={i} />)
+            )}
+            {(status === 'checkmate' || status === 'draw' || status === 'resigned' || status === 'timeout') && (
+              <div className="bg-surface-elevated border border-accent/30 rounded p-3 text-center mt-2">
+                <p className="text-[13px] text-accent font-semibold">
+                  {status === 'checkmate' ? 'Checkmate' : status === 'draw' ? 'Draw' : status === 'timeout' ? 'Time out' : 'Resigned'}
+                </p>
+              </div>
+            )}
           </div>
         ) : (
-          history.map((move, i) => (
-            <CommentaryCard key={i} move={move} moveIndex={i} />
-          ))
-        )}
-
-        {/* Game over banner */}
-        {(status === 'checkmate' || status === 'draw' || status === 'resigned') && (
-          <div className="bg-surface-elevated border border-accent/30 rounded p-3 text-center mt-2">
-            <p className="text-[13px] text-accent font-semibold">
-              {status === 'checkmate' ? 'Checkmate' : status === 'draw' ? 'Draw' : 'Resigned'}
-            </p>
+          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+            {chat.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-[12px] text-text-muted text-center">
+                  Ask anything about the position — threats, plans, why a move is good or bad.
+                </p>
+              </div>
+            ) : (
+              chat.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'assistant' && (
+                    <div className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center mr-2 mt-0.5 shrink-0">
+                      <span className="text-[9px] text-accent font-bold">A</span>
+                    </div>
+                  )}
+                  <div className={`max-w-[82%] rounded-xl px-3 py-2 text-[12px] leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-accent/15 text-text-primary rounded-tr-sm'
+                      : 'bg-surface-elevated text-text-primary rounded-tl-sm'
+                  }`}>
+                    <SquareHighlighted text={msg.text} />
+                    {msg.streaming && (
+                      <span className="inline-block w-1 h-3 ml-0.5 bg-accent animate-pulse align-middle rounded-sm" />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={chatEndRef} />
           </div>
         )}
       </div>
 
-      {/* Actions */}
-      <div className="px-4 py-3 border-t border-divider">
+      {/* Bottom bar — always visible */}
+      <div className="px-4 py-3 border-t border-divider shrink-0">
         <div className="flex items-center gap-2 bg-surface-elevated rounded px-3 py-2">
           <input
             className="flex-1 bg-transparent text-[13px] text-text-primary placeholder-text-muted outline-none"
-            placeholder="Ask for advice or suggest a move..."
-            disabled
+            placeholder="Ask about the position..."
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') sendChat() }}
+            onFocus={() => setTab('chat')}
+            disabled={chatBusy}
           />
-          <button className="text-accent">▶</button>
+          <button
+            className="text-accent disabled:opacity-30"
+            onClick={sendChat}
+            disabled={chatBusy || !chatInput.trim()}
+          >
+            ▶
+          </button>
         </div>
         <div className="flex gap-3 mt-2 justify-center">
           <button
@@ -105,18 +216,51 @@ export default function AssistantPanel() {
   )
 }
 
+function TabButton({ label, active, onClick, badge }: {
+  label: string; active: boolean; onClick: () => void; badge?: number
+}) {
+  return (
+    <button
+      className={`flex-1 py-2 text-[12px] font-mono transition-colors relative ${
+        active
+          ? 'text-text-primary border-b-2 border-accent -mb-px'
+          : 'text-text-muted hover:text-text-primary border-b-2 border-transparent -mb-px'
+      }`}
+      onClick={onClick}
+    >
+      {label}
+      {badge !== undefined && (
+        <span className="ml-1.5 text-[10px] bg-surface-elevated text-text-muted rounded-full px-1.5 py-0.5">
+          {badge}
+        </span>
+      )}
+    </button>
+  )
+}
+
+function Meter({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] font-mono text-text-muted uppercase w-20 shrink-0">{label}</span>
+      <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${value}%`, backgroundColor: color }}
+        />
+      </div>
+      <span className="text-[10px] font-mono text-text-muted w-8 text-right">{value}%</span>
+    </div>
+  )
+}
+
 function CommentaryCard({ move, moveIndex }: { move: MoveRecord; moveIndex: number }) {
   const fullMoveNumber = Math.floor(moveIndex / 2) + 1
   const isWhite = move.movedBy === 'w'
-  const moveLabel = isWhite
-    ? `${fullMoveNumber}. ${move.san}`
-    : `${fullMoveNumber}... ${move.san}`
-
+  const moveLabel = isWhite ? `${fullMoveNumber}. ${move.san}` : `${fullMoveNumber}... ${move.san}`
   const evalLabel = formatEval(move.evalCp, move.isMate, move.mateIn)
 
   return (
     <div className="bg-surface-elevated rounded-lg overflow-hidden">
-      {/* Move header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-divider/50">
         <div className="flex items-center gap-2">
           <span className={`w-1.5 h-1.5 rounded-full ${isWhite ? 'bg-[#E6EEF5]' : 'bg-[#141B22] border border-text-muted'}`} />
@@ -125,18 +269,14 @@ function CommentaryCard({ move, moveIndex }: { move: MoveRecord; moveIndex: numb
         </div>
         {evalLabel && (
           <span className={`text-[11px] font-mono tabular-nums ${
-            move.evalCp !== null && move.evalCp > 0
-              ? 'text-[#E6EEF5]'
-              : move.evalCp !== null && move.evalCp < 0
-              ? 'text-danger'
-              : 'text-text-muted'
+            move.evalCp !== null && move.evalCp > 0 ? 'text-[#E6EEF5]'
+            : move.evalCp !== null && move.evalCp < 0 ? 'text-danger'
+            : 'text-text-muted'
           }`}>
             {evalLabel}
           </span>
         )}
       </div>
-
-      {/* Commentary body */}
       <div className="px-3 py-2">
         {move.commentary ? (
           <p className="text-[12px] text-text-primary leading-relaxed">
@@ -154,25 +294,23 @@ function CommentaryCard({ move, moveIndex }: { move: MoveRecord; moveIndex: numb
 }
 
 function SquareHighlighted({ text }: { text: string }) {
-  const parts = text.split(/\b([a-h][1-8])\b/g)
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\b[a-h][1-8]\b)/g)
   return (
     <>
-      {parts.map((part, i) =>
-        /^[a-h][1-8]$/.test(part) ? (
-          <span key={i} className="text-accent font-mono">{part}</span>
-        ) : (
-          <span key={i}>{part}</span>
-        ),
-      )}
+      {parts.map((part, i) => {
+        if (/^\*\*[^*]+\*\*$/.test(part))
+          return <strong key={i} className="font-semibold text-text-primary">{part.slice(2, -2)}</strong>
+        if (/^\*[^*]+\*$/.test(part))
+          return <em key={i} className="italic">{part.slice(1, -1)}</em>
+        if (/^[a-h][1-8]$/.test(part))
+          return <span key={i} className="text-accent font-mono">{part}</span>
+        return <span key={i}>{part}</span>
+      })}
     </>
   )
 }
 
-function formatEval(
-  evalCp: number | null,
-  isMate: boolean,
-  mateIn: number | null,
-): string {
+function formatEval(evalCp: number | null, isMate: boolean, mateIn: number | null): string {
   if (evalCp === null) return ''
   if (isMate && mateIn !== null) return mateIn > 0 ? `M${mateIn}` : `-M${Math.abs(mateIn)}`
   if (Math.abs(evalCp) >= MATE_SENTINEL) return evalCp > 0 ? '+M' : '-M'

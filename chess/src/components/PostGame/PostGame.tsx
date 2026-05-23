@@ -21,6 +21,8 @@ export default function PostGame() {
         : 'Aether wins'
       : status === 'draw'
       ? 'Draw'
+      : status === 'timeout'
+      ? 'Time out'
       : 'You resigned'
 
   // Kick off digest generation once, when postGame is first initialised

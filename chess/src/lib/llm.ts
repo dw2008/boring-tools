@@ -73,6 +73,48 @@ export async function getCommentary(
   if (debug) console.log('\n[LLM stream done]')
 }
 
+export type ChatRequest = {
+  fen: string
+  engineEval: number | null
+  recentMoves: string[]   // last few SANs for context
+  question: string
+}
+
+export async function getChatResponse(
+  req: ChatRequest,
+  onChunk: (chunk: string) => void,
+): Promise<void> {
+  const client = getClient()
+  const evalStr =
+    req.engineEval === null
+      ? 'unknown'
+      : Math.abs(req.engineEval) >= 10_000
+      ? req.engineEval > 0 ? 'white has a forced mate' : 'black has a forced mate'
+      : `${(req.engineEval / 100).toFixed(2)} pawns (white's perspective)`
+
+  const movesStr = req.recentMoves.length
+    ? `Recent moves: ${req.recentMoves.slice(-6).join(', ')}.`
+    : 'No moves played yet.'
+
+  const system = `You are Aether, an AI chess assistant. Current position FEN: ${req.fen}. ${movesStr} Engine evaluation: ${evalStr}. Answer the player's question concisely in 1–3 sentences. Use second person. Mention specific squares when relevant.`
+
+  const stream = client.messages.stream({
+    model: MODEL,
+    max_tokens: 200,
+    system,
+    messages: [{ role: 'user', content: req.question }],
+  })
+
+  for await (const event of stream) {
+    if (
+      event.type === 'content_block_delta' &&
+      event.delta.type === 'text_delta'
+    ) {
+      onChunk(event.delta.text)
+    }
+  }
+}
+
 export type PostGameRequest = {
   pgn: string
   keyMoments: Array<{
