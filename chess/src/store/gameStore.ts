@@ -50,9 +50,13 @@ type GameStore = {
   engine: EngineState
   postGame: PostGameState | null
 
+  bestMoveVisible: boolean
+
   applyMove: (args: { from: Square; to: Square; promotion?: string }) => boolean
   resignGame: () => void
   resetGame: () => void
+  takebackMove: () => void
+  flashBestMove: () => void
   setEngineResult: (result: Partial<EngineState>) => void
   setEngineThinking: (isThinking: boolean) => void
   appendMoveCommentary: (chunk: string, moveIndex: number) => void
@@ -108,6 +112,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   playerColor: 'w',
   engine: initialEngineState,
   postGame: null,
+  bestMoveVisible: false,
 
   applyMove: ({ from, to, promotion }) => {
     const { chess } = get()
@@ -150,6 +155,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ status: 'resigned' })
   },
 
+  takebackMove: () => {
+    const { chess, history } = get()
+    if (history.length === 0) return
+
+    // Undo black's response + white's move, or just white's if engine hasn't replied yet
+    const movesToUndo = history[history.length - 1].movedBy === 'b' ? 2 : 1
+    const count = Math.min(movesToUndo, history.length)
+
+    for (let i = 0; i < count; i++) chess.undo()
+
+    set((state) => ({
+      fen: chess.fen(),
+      history: state.history.slice(0, -count),
+      status: 'playing',
+      engine: { ...initialEngineState },
+    }))
+  },
+
+  flashBestMove: () => {
+    set({ bestMoveVisible: true })
+    setTimeout(() => set({ bestMoveVisible: false }), 3000)
+  },
+
   resetGame: () => {
     const chess = new Chess()
     set({
@@ -159,6 +187,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       status: 'idle',
       engine: initialEngineState,
       postGame: null,
+      bestMoveVisible: false,
     })
   },
 

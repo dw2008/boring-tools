@@ -22,6 +22,8 @@ export default function Board() {
   const setMoveCommentaryStreaming = useGameStore((s) => s.setMoveCommentaryStreaming)
   const getCommentaryForFen = useGameStore((s) => s.getCommentaryForFen)
   const engineEval = useGameStore((s) => s.engine.evalCp)
+  const bestMove = useGameStore((s) => s.engine.bestMove)
+  const bestMoveVisible = useGameStore((s) => s.bestMoveVisible)
 
   const historyRef = useRef(history)
   historyRef.current = history
@@ -156,6 +158,9 @@ export default function Board() {
               darkSquareStyle: { backgroundColor: '#1B242D' },
               lightSquareStyle: { backgroundColor: '#2D3E50' },
               dropSquareStyle: { backgroundColor: '#34D8C8', opacity: 0.4 },
+              arrows: bestMoveVisible && bestMove && bestMove !== '(none)'
+                ? [{ startSquare: bestMove.slice(0, 2), endSquare: bestMove.slice(2, 4), color: '#34D8C8' }]
+                : [],
             }}
           />
         </div>

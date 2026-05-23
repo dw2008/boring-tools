@@ -10,6 +10,10 @@ export default function AssistantPanel() {
   const status = useGameStore((s) => s.status)
   const resetGame = useGameStore((s) => s.resetGame)
   const resignGame = useGameStore((s) => s.resignGame)
+  const takebackMove = useGameStore((s) => s.takebackMove)
+  const flashBestMove = useGameStore((s) => s.flashBestMove)
+  const bestMoveVisible = useGameStore((s) => s.bestMoveVisible)
+  const hasBestMove = useGameStore((s) => !!s.engine.bestMove && s.engine.bestMove !== '(none)')
 
   const isAnalyzing = engine.isThinking
   const evalLabel = formatEval(engine.evalCp, engine.isMate, engine.mateIn)
@@ -70,17 +74,29 @@ export default function AssistantPanel() {
           <button className="text-accent">▶</button>
         </div>
         <div className="flex gap-3 mt-2 justify-center">
-          <button className="text-[11px] text-accent border border-accent/40 hover:bg-accent/10 font-mono rounded px-2 py-1 transition-colors">
+          <button
+            className="text-[11px] font-mono rounded px-2 py-1 transition-colors border disabled:opacity-30 disabled:cursor-not-allowed"
+            style={bestMoveVisible
+              ? { color: '#34D8C8', borderColor: '#34D8C8', backgroundColor: 'rgba(52,216,200,0.15)' }
+              : { color: '#34D8C8', borderColor: 'rgba(52,216,200,0.4)' }
+            }
+            onClick={flashBestMove}
+            disabled={!hasBestMove}
+          >
             Best Move?
           </button>
           <button
-            className="text-[11px] text-text-muted hover:text-danger font-mono border border-divider rounded px-2 py-1 transition-colors"
+            className="text-[11px] text-text-muted hover:text-danger font-mono border border-divider rounded px-2 py-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             onClick={resignGame}
             disabled={history.length === 0}
           >
             Resign
           </button>
-          <button className="text-[11px] text-text-muted hover:text-text-primary font-mono border border-divider rounded px-2 py-1 transition-colors">
+          <button
+            className="text-[11px] text-text-muted hover:text-text-primary font-mono border border-divider rounded px-2 py-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            onClick={takebackMove}
+            disabled={history.length === 0}
+          >
             Takeback
           </button>
         </div>
