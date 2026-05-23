@@ -65,7 +65,7 @@ export function ChessClient() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Chess</h1>
           <p className="text-muted-foreground">
-            Play against the Aether engine with real-time AI commentary on every
+            Play against the boring engine with real-time AI commentary on every
             move.
           </p>
         </div>
