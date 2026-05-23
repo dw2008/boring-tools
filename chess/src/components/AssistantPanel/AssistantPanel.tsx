@@ -61,7 +61,7 @@ export default function AssistantPanel() {
         (chunk) => appendChatChunk(assistantId, chunk),
       )
     } catch (err) {
-      console.error('[Aether] Chat error:', err)
+      console.error('[chess] Chat error:', err)
       appendChatChunk(assistantId, '(error — check console)')
     } finally {
       finalizeChatMessage(assistantId)
@@ -75,7 +75,7 @@ export default function AssistantPanel() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-divider shrink-0">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${isAnalyzing ? 'bg-accent animate-pulse' : 'bg-text-muted'}`} />
-          <span className="text-[13px] font-semibold text-text-primary">Aether Assistant</span>
+          <span className="text-[13px] font-semibold text-text-primary">Chess Assistant</span>
         </div>
         <span className="text-[11px] text-text-muted font-mono">
           {isAnalyzing ? '• Analyzing...' : evalLabel ? `• ${evalLabel}` : '• Ready'}
@@ -87,7 +87,7 @@ export default function AssistantPanel() {
       <div className="flex border-b border-divider shrink-0">
         <TabButton label="Commentary" active={tab === 'commentary'} onClick={() => setTab('commentary')}
           badge={history.length > 0 ? history.length : undefined} />
-        <TabButton label="Ask Aether" active={tab === 'chat'} onClick={() => setTab('chat')}
+        <TabButton label="Ask AI" active={tab === 'chat'} onClick={() => setTab('chat')}
           badge={chat.filter((m) => m.role === 'user').length || undefined} />
       </div>
 

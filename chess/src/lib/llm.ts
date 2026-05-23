@@ -35,11 +35,11 @@ function buildCommentaryPrompt(req: CommentaryRequest): string {
   const evalSwing = (req.evalDelta / 100).toFixed(2)
 
   if (req.movedBy === 'w') {
-    return `You are Aether, an AI chess assistant. The player (white) just played ${req.lastMoveSan}. ${evalStr}. The eval shifted by ${evalSwing} pawns. The engine's best continuation is ${pvStr || 'unknown'}.
+    return `You are a chess assistant. The player (white) just played ${req.lastMoveSan}. ${evalStr}. The eval shifted by ${evalSwing} pawns. The engine's best continuation is ${pvStr || 'unknown'}.
 
 In 2–3 sentences, give the player strategic insight about their move in second person ("you"). Mention specific squares like "f3" or "d5" when relevant. Be direct — no greeting or introduction.`
   } else {
-    return `You are Aether, an AI chess assistant. Black just played ${req.lastMoveSan}. ${evalStr}. The eval shifted by ${evalSwing} pawns from white's perspective. The engine's best continuation is ${pvStr || 'unknown'}.
+    return `You are a chess assistant. Black just played ${req.lastMoveSan}. ${evalStr}. The eval shifted by ${evalSwing} pawns from white's perspective. The engine's best continuation is ${pvStr || 'unknown'}.
 
 In 2–3 sentences, explain the strategic idea behind black's move — what they are threatening, what plan they are pursuing, and what the player (white) should watch out for. Mention specific squares like "f3" or "d5" when relevant. Speak in second person to the white player ("black is threatening…", "you should watch…"). No greeting or introduction.`
   }
@@ -96,7 +96,7 @@ export async function getChatResponse(
     ? `Recent moves: ${req.recentMoves.slice(-6).join(', ')}.`
     : 'No moves played yet.'
 
-  const system = `You are Aether, an AI chess assistant. Current position FEN: ${req.fen}. ${movesStr} Engine evaluation: ${evalStr}. Answer the player's question concisely in 1–3 sentences. Use second person. Mention specific squares when relevant.`
+  const system = `You are a chess assistant. Current position FEN: ${req.fen}. ${movesStr} Engine evaluation: ${evalStr}. Answer the player's question concisely in 1–3 sentences. Use second person. Mention specific squares when relevant.`
 
   const stream = client.messages.stream({
     model: MODEL,
@@ -139,7 +139,7 @@ export async function getPostGameDigest(
     )
     .join('\n')
 
-  const prompt = `You are Aether, an AI chess assistant writing a post-game digest.
+  const prompt = `You are a chess assistant writing a post-game digest.
 
 Game PGN:
 ${req.pgn}

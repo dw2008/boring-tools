@@ -68,7 +68,7 @@ export default function Board() {
         }
       })
       .catch((err) => {
-        console.error('[Aether] Engine error:', err)
+        console.error('[chess] Engine error:', err)
         setEngineThinking(false)
       })
 
@@ -86,13 +86,13 @@ export default function Board() {
     ;(async () => {
       // Safety timeout — clears the streaming indicator if the API call hangs
       const safetyTimer = setTimeout(() => {
-        console.warn('[Aether] Commentary timed out for move', moveIndex)
+        console.warn('[chess] Commentary timed out for move', moveIndex)
         finalizeMoveCommentary(moveIndex)
       }, 20_000)
 
       try {
         const engineState = useGameStore.getState().engine
-        console.log('[Aether] Requesting commentary for move', moveIndex, lastMove?.san)
+        console.log('[chess] Requesting commentary for move', moveIndex, lastMove?.san)
         await getCommentary(
           {
             fen: currentFen,
@@ -105,9 +105,9 @@ export default function Board() {
           },
           (chunk) => appendMoveCommentary(chunk, moveIndex),
         )
-        console.log('[Aether] Commentary done for move', moveIndex)
+        console.log('[chess] Commentary done for move', moveIndex)
       } catch (err) {
-        console.error('[Aether] LLM error for move', moveIndex, err)
+        console.error('[chess] LLM error for move', moveIndex, err)
       } finally {
         clearTimeout(safetyTimer)
         finalizeMoveCommentary(moveIndex)
@@ -137,7 +137,7 @@ export default function Board() {
     <div className="flex flex-col items-center justify-center w-full h-full px-4">
       <div className="flex items-center justify-between w-full max-w-[720px] mb-3 px-1">
         <span className="text-[12px] text-text-muted font-mono uppercase tracking-widest">
-          MATCH: <span className="text-text-primary">You vs Aether Engine</span>
+          MATCH: <span className="text-text-primary">You vs boring engine</span>
         </span>
         <span className="text-[12px] text-text-muted font-mono">
           {(status === 'playing' || status === 'idle') && (

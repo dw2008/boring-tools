@@ -18,7 +18,7 @@ export default function PostGame() {
     status === 'checkmate'
       ? history[history.length - 1]?.movedBy === 'w'
         ? 'You win'
-        : 'Aether wins'
+        : 'Engine wins'
       : status === 'draw'
       ? 'Draw'
       : 'You resigned'
@@ -45,7 +45,7 @@ export default function PostGame() {
           (chunk) => appendDigest(chunk),
         )
       } catch (err) {
-        console.error('[Aether] Post-game digest error:', err)
+        console.error('[chess] Post-game digest error:', err)
       } finally {
         finalizeDigest()
       }
