@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Crown } from "lucide-react";
 
 const CHESS_APP_URL =
-  process.env.NEXT_PUBLIC_CHESS_APP_URL ?? "/chess-app/index.html";
+  process.env.NEXT_PUBLIC_CHESS_APP_URL || "/chess-app/index.html";
 
 type State = "idle" | "loading" | "playing" | "limit_reached" | "error";
 
