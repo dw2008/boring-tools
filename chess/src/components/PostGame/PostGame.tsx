@@ -64,10 +64,10 @@ export default function PostGame() {
           </p>
           <h1 className="text-2xl font-semibold text-text-primary">{resultLabel}</h1>
           {status === 'checkmate' && history[history.length - 1]?.movedBy === 'b' && (
-            <p className="text-[13px] text-text-muted mt-1">Stockfish never holds back — try easy mode for a fairer fight.</p>
+            <p className="text-[13px] text-text-muted mt-1">Good effort. Give it another go.</p>
           )}
           {status === 'resigned' && (
-            <p className="text-[13px] text-text-muted mt-1">Knowing when to stop is part of it. Try again?</p>
+            <p className="text-[13px] text-text-muted mt-1">Calling it early takes guts too. Try again.</p>
           )}
         </div>
         <button

@@ -3,7 +3,7 @@ import { Chess } from 'chess.js'
 import type { Square } from 'chess.js'
 
 export type GameStatus = 'idle' | 'playing' | 'checkmate' | 'draw' | 'resigned'
-export type Difficulty = 'easy' | 'medium' | 'hard'
+export type Difficulty = 'beginner' | 'medium' | 'hard'
 
 export type MoveRecord = {
   san: string
@@ -135,7 +135,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   fen: new Chess().fen(),
   history: [],
   status: 'idle',
-  difficulty: 'medium',
+  difficulty: 'beginner' as Difficulty,
   playerColor: 'w',
   engine: initialEngineState,
   postGame: null,

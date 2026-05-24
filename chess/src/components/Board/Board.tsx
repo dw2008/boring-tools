@@ -8,7 +8,7 @@ import { getCommentary } from '../../lib/llm'
 import EvalBar from './EvalBar'
 
 const ENGINE_COLOR = 'b'
-const DEPTH_MAP = { easy: 3, medium: 8, hard: 18 }
+const DEPTH_MAP = { beginner: 3, medium: 8, hard: 18 }
 
 export default function Board() {
   const fen = useGameStore((s) => s.fen)
@@ -169,7 +169,7 @@ export default function Board() {
       {status === 'idle' && (
         <div className="flex items-center gap-3 mt-3 w-full max-w-[720px] px-1">
           <span className="text-[11px] font-mono text-text-muted uppercase tracking-widest">Difficulty</span>
-          {(['easy', 'medium', 'hard'] as const).map((d) => (
+          {(['beginner', 'medium', 'hard'] as const).map((d) => (
             <button
               key={d}
               onClick={() => setDifficulty(d)}
