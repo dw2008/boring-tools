@@ -1,3 +1,3 @@
 {
-  "buildCommand": "(cd chess && npm install && npx vite build) && mkdir -p public/chess-app && cp -r chess/dist/. public/chess-app/ && next build"
+  "buildCommand": "(cd chess && npm install && ./node_modules/.bin/vite build) && mkdir -p public/chess-app && cp -r chess/dist/. public/chess-app/ && next build"
 }
