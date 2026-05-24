@@ -3,11 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   headers: async () => [
     {
-      // Allow same-origin iframes on all pages (Next.js 16 defaults to DENY)
-      source: "/(.*)",
-      headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
-    },
-    {
       // COOP/COEP required for Stockfish SharedArrayBuffer
       source: "/chess-app/:path*",
       headers: [
