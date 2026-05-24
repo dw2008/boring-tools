@@ -4,11 +4,13 @@ const nextConfig: NextConfig = {
   headers: async () => [
     {
       // COOP/COEP required for Stockfish SharedArrayBuffer
+      // X-Frame-Options overrides Next.js default DENY to allow same-origin iframe
       source: "/chess-app/:path*",
       headers: [
         { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
         { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+        { key: "X-Frame-Options", value: "SAMEORIGIN" },
       ],
     },
     {
