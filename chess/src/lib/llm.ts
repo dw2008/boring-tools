@@ -35,13 +35,13 @@ function buildCommentaryPrompt(req: CommentaryRequest): string {
   const evalSwing = (req.evalDelta / 100).toFixed(2)
 
   if (req.movedBy === 'w') {
-    return `You are a chess assistant. The player (white) just played ${req.lastMoveSan}. ${evalStr}. The eval shifted by ${evalSwing} pawns. The engine's best continuation is ${pvStr || 'unknown'}.
+    return `You are a friendly chess assistant talking to a casual player. The player (white) just played ${req.lastMoveSan}. ${evalStr}. The engine's best line is ${pvStr || 'unknown'}.
 
-In 2–3 sentences, give the player strategic insight about their move in second person ("you"). Mention specific squares like "f3" or "d5" when relevant. Be direct — no greeting or introduction.`
+In 1–2 short sentences, tell the player what their move does in plain English. Skip jargon. No intro, no filler — just the key idea.`
   } else {
-    return `You are a chess assistant. Black just played ${req.lastMoveSan}. ${evalStr}. The eval shifted by ${evalSwing} pawns from white's perspective. The engine's best continuation is ${pvStr || 'unknown'}.
+    return `You are a friendly chess assistant talking to a casual player. Black just played ${req.lastMoveSan}. ${evalStr}. The engine's best line is ${pvStr || 'unknown'}.
 
-In 2–3 sentences, explain the strategic idea behind black's move — what they are threatening, what plan they are pursuing, and what the player (white) should watch out for. Mention specific squares like "f3" or "d5" when relevant. Speak in second person to the white player ("black is threatening…", "you should watch…"). No greeting or introduction.`
+In 1–2 short sentences, tell the white player what black is trying to do and what to watch out for. Plain English, no jargon, no intro.`
   }
 }
 
@@ -56,7 +56,7 @@ export async function getCommentary(
   const client = getClient()
   const stream = client.messages.stream({
     model: MODEL,
-    max_tokens: 150,
+    max_tokens: 80,
     messages: [{ role: 'user', content: prompt }],
   })
 
@@ -96,7 +96,7 @@ export async function getChatResponse(
     ? `Recent moves: ${req.recentMoves.slice(-6).join(', ')}.`
     : 'No moves played yet.'
 
-  const system = `You are a chess assistant. Current position FEN: ${req.fen}. ${movesStr} Engine evaluation: ${evalStr}. Answer the player's question concisely in 1–3 sentences. Use second person. Mention specific squares when relevant.`
+  const system = `You are a friendly chess assistant. Current position FEN: ${req.fen}. ${movesStr} Engine evaluation: ${evalStr}. Answer in 1–2 short sentences using plain, everyday language. No jargon unless the player asks for it.`
 
   const stream = client.messages.stream({
     model: MODEL,
@@ -147,12 +147,12 @@ ${req.pgn}
 Key moments by eval swing:
 ${momentsText || 'No major swings detected — a steady game.'}
 
-Write a newsletter-style digest in these sections:
-1. Opening (1–2 sentences on the opening choices)
-2. Key Moments (one short paragraph per moment above, explaining what happened and why it mattered)
-3. Takeaway (1–2 sentences of the main lesson)
+Write a short post-game summary in plain, casual English — like a friend explaining the game, not a chess coach. Structure it as:
+1. Opening (1 sentence on how the game started)
+2. Key Moments (1–2 sentences per moment: what happened and why it mattered, simply)
+3. Takeaway (1 sentence — the main thing to remember)
 
-Use second person ("you" = the white player). Mention specific squares like d4 or f3 when relevant. Be direct and concise.`
+Keep it light and easy to read. Avoid chess jargon. Use "you" for the white player.`
 
   const stream = client.messages.stream({
     model: MODEL,
