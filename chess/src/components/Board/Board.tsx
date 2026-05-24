@@ -8,7 +8,7 @@ import { getCommentary } from '../../lib/llm'
 import EvalBar from './EvalBar'
 
 const ENGINE_COLOR = 'b'
-const ENGINE_DEPTH = 14
+const DEPTH_MAP = { easy: 3, medium: 8, hard: 18 }
 
 export default function Board() {
   const fen = useGameStore((s) => s.fen)
@@ -25,6 +25,8 @@ export default function Board() {
   const bestMove = useGameStore((s) => s.engine.bestMove)
   const bestMoveVisible = useGameStore((s) => s.bestMoveVisible)
   const clock = useGameStore((s) => s.clock)
+  const difficulty = useGameStore((s) => s.difficulty)
+  const setDifficulty = useGameStore((s) => s.setDifficulty)
 
   const historyRef = useRef(history)
   historyRef.current = history
@@ -46,7 +48,7 @@ export default function Board() {
     // --- Engine evaluation (always) + play if it's the engine's turn ---
     setEngineThinking(true)
     getEngine()
-      .evaluate(currentFen, { depth: ENGINE_DEPTH })
+      .evaluate(currentFen, { depth: DEPTH_MAP[useGameStore.getState().difficulty] })
       .then((result) => {
         setEngineResult({
           evalCp: result.evalCp,
@@ -163,6 +165,26 @@ export default function Board() {
           />
         </div>
       </div>
+
+      {status === 'idle' && (
+        <div className="flex items-center gap-3 mt-3 w-full max-w-[720px] px-1">
+          <span className="text-[11px] font-mono text-text-muted uppercase tracking-widest">Difficulty</span>
+          {(['easy', 'medium', 'hard'] as const).map((d) => (
+            <button
+              key={d}
+              onClick={() => setDifficulty(d)}
+              className={`px-3 py-1 rounded text-[12px] font-mono capitalize transition-colors ${
+                difficulty === d
+                  ? 'bg-accent text-background font-semibold'
+                  : 'bg-surface-elevated text-text-muted hover:text-text-primary'
+              }`}
+            >
+              {d}
+            </button>
+          ))}
+          <span className="text-[11px] text-text-muted font-mono ml-auto">Move a piece to start</span>
+        </div>
+      )}
     </div>
   )
 }

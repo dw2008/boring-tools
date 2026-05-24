@@ -63,6 +63,12 @@ export default function PostGame() {
             Game Over
           </p>
           <h1 className="text-2xl font-semibold text-text-primary">{resultLabel}</h1>
+          {status === 'checkmate' && history[history.length - 1]?.movedBy === 'b' && (
+            <p className="text-[13px] text-text-muted mt-1">Stockfish never holds back — try easy mode for a fairer fight.</p>
+          )}
+          {status === 'resigned' && (
+            <p className="text-[13px] text-text-muted mt-1">Knowing when to stop is part of it. Try again?</p>
+          )}
         </div>
         <button
           onClick={resetGame}

@@ -3,6 +3,7 @@ import { Chess } from 'chess.js'
 import type { Square } from 'chess.js'
 
 export type GameStatus = 'idle' | 'playing' | 'checkmate' | 'draw' | 'resigned'
+export type Difficulty = 'easy' | 'medium' | 'hard'
 
 export type MoveRecord = {
   san: string
@@ -58,6 +59,7 @@ type GameStore = {
   fen: string
   history: MoveRecord[]
   status: GameStatus
+  difficulty: Difficulty
   playerColor: 'w' | 'b'
   engine: EngineState
   postGame: PostGameState | null
@@ -79,6 +81,7 @@ type GameStore = {
   initPostGame: () => void
   appendDigest: (chunk: string) => void
   finalizeDigest: () => void
+  setDifficulty: (d: Difficulty) => void
   // Clock
   tickClock: () => void
   // Chat
@@ -132,6 +135,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   fen: new Chess().fen(),
   history: [],
   status: 'idle',
+  difficulty: 'medium',
   playerColor: 'w',
   engine: initialEngineState,
   postGame: null,
@@ -301,6 +305,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return { postGame: { ...state.postGame, isGenerating: false } }
     })
   },
+
+  setDifficulty: (d) => set({ difficulty: d }),
 
   tickClock: () => {
     set((state) => {
