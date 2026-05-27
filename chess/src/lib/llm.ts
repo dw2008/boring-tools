@@ -32,7 +32,6 @@ function buildCommentaryPrompt(req: CommentaryRequest): string {
       : `the engine evaluates the position at ${(req.engineEval / 100).toFixed(2)} pawns from white's perspective`
 
   const pvStr = req.pv.slice(0, 3).join(' ')
-  const evalSwing = (req.evalDelta / 100).toFixed(2)
 
   if (req.movedBy === 'w') {
     return `You are a friendly chess assistant talking to a casual player. The player (white) just played ${req.lastMoveSan}. ${evalStr}. The engine's best line is ${pvStr || 'unknown'}.

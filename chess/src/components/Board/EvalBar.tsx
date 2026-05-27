@@ -18,7 +18,6 @@ export default function EvalBar({ evalCp }: Props) {
     }
   }
 
-  const whitePercent = `${(whiteShare * 100).toFixed(1)}%`
   const blackPercent = `${((1 - whiteShare) * 100).toFixed(1)}%`
 
   const label = formatEval(evalCp)

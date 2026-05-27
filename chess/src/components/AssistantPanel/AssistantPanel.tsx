@@ -7,7 +7,7 @@ const MATE_SENTINEL = 10_000
 
 type Tab = 'commentary' | 'chat'
 
-export default function AssistantPanel() {
+export default function AssistantPanel({ isOpen = false, onClose }: { isOpen?: boolean; onClose?: () => void } = {}) {
   const engine = useGameStore((s) => s.engine)
   const history = useGameStore((s) => s.history)
   const status = useGameStore((s) => s.status)
@@ -70,16 +70,33 @@ export default function AssistantPanel() {
   }
 
   return (
-    <aside className="flex flex-col w-[380px] shrink-0 bg-surface border-l border-divider h-full">
+    <aside
+      className={`flex flex-col bg-surface border-l border-divider
+        fixed inset-y-0 right-0 h-full w-[90%] max-w-[400px] z-50
+        transition-transform duration-300 ease-out
+        ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+        lg:static lg:w-[380px] lg:max-w-none lg:shrink-0 lg:translate-x-0 lg:transition-none lg:z-auto`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-divider shrink-0">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${isAnalyzing ? 'bg-accent animate-pulse' : 'bg-text-muted'}`} />
           <span className="text-[13px] font-semibold text-text-primary">Chess Assistant</span>
         </div>
-        <span className="text-[11px] text-text-muted font-mono">
-          {isAnalyzing ? '• Analyzing...' : evalLabel ? `• ${evalLabel}` : '• Ready'}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] text-text-muted font-mono">
+            {isAnalyzing ? '• Analyzing...' : evalLabel ? `• ${evalLabel}` : '• Ready'}
+          </span>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden text-text-muted hover:text-text-primary text-[16px] leading-none"
+              aria-label="Close assistant"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
 

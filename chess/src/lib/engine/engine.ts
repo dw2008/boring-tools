@@ -18,7 +18,6 @@ const MATE_SENTINEL = 10_000
 
 export class StockfishEngine {
   private worker: Worker | null = null
-  private ready = false
   private pending: PendingEval | null = null
   private partialResult: Partial<EvalResult> = {}
   // Tracks the side to move for perspective normalisation
@@ -48,7 +47,6 @@ export class StockfishEngine {
           worker.postMessage('isready')
         } else if (line === 'readyok') {
           clearTimeout(timeout)
-          this.ready = true
           worker.onmessage = (ev: MessageEvent<string>) => this.handleMessage(ev.data)
           resolve()
         }
@@ -88,7 +86,6 @@ export class StockfishEngine {
     }
     this.worker?.terminate()
     this.worker = null
-    this.ready = false
     this.initPromise = null
   }
 

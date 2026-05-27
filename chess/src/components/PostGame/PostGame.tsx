@@ -10,7 +10,6 @@ export default function PostGame() {
   const chess = useGameStore((s) => s.chess)
   const postGame = useGameStore((s) => s.postGame)
   const resetGame = useGameStore((s) => s.resetGame)
-  const initPostGame = useGameStore((s) => s.initPostGame)
   const appendDigest = useGameStore((s) => s.appendDigest)
   const finalizeDigest = useGameStore((s) => s.finalizeDigest)
 
