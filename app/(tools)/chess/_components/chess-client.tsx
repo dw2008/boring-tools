@@ -66,7 +66,7 @@ export function ChessClient() {
           <h1 className="text-3xl font-bold tracking-tight">Chess</h1>
           <p className="text-muted-foreground">
             Play against the boring engine with real-time AI commentary on every
-            move.
+            move. Perfect for learning chess strategies through responsive coaching!
           </p>
         </div>
 
