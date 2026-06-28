@@ -61,7 +61,10 @@ export function NotesUpload({
         {!file ? (
           <div className="flex flex-col items-center gap-4 py-8">
             <p className="text-sm text-muted-foreground text-center max-w-md">
-              Upload a photo of a book page or handwritten notes. Clear handwriting works best.
+              Upload a photo of a book page or handwritten notes. Diagrams and
+              figures on the page get captured too. Clear handwriting and a
+              sharp, well-lit image work best — fuzzy or low-quality photos
+              produce weaker results.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <Button
