@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PenTool, Code, Crown, ArrowRight } from "lucide-react";
+import { PenTool, Code, Crown, ScanLine, ArrowRight } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -30,6 +30,13 @@ const tools = [
     href: "/chess",
     icon: Crown,
   },
+  {
+    title: "Note Digitizer",
+    description:
+      "Snap a photo of a book page or handwritten notes and get clean, structured Markdown back.",
+    href: "/notes",
+    icon: ScanLine,
+  },
 ];
 
 export default function HomePage() {
@@ -44,7 +51,7 @@ export default function HomePage() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {tools.map((tool) => (
           <Link key={tool.href} href={tool.href}>
             <Card className="h-full transition-colors hover:bg-muted/50">

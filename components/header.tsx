@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PenTool, Code, Crown } from "lucide-react";
+import { PenTool, Code, Crown, ScanLine } from "lucide-react";
 import { UserMenu } from "@/components/user-menu";
 
 export function Header() {
@@ -24,7 +24,7 @@ export function Header() {
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <Code className="h-4 w-4" />
-            Interview Prep
+            Interview
           </Link>
           <Link
             href="/chess"
@@ -32,6 +32,13 @@ export function Header() {
           >
             <Crown className="h-4 w-4" />
             Chess
+          </Link>
+          <Link
+            href="/notes"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ScanLine className="h-4 w-4" />
+            Notes
           </Link>
           <UserMenu />
         </nav>
