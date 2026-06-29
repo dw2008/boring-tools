@@ -10,6 +10,7 @@ interface NoteRow {
   title: string;
   markdown: string;
   figures: Figure[];
+  notebook: string;
   created_at: string;
 }
 
@@ -52,6 +53,16 @@ async function figureBytes(
   return Buffer.from(await blob.arrayBuffer());
 }
 
+// Group notes by notebook, notebooks sorted, order within a group preserved.
+function groupByNotebook(notes: NoteRow[]): [string, NoteRow[]][] {
+  const groups = new Map<string, NoteRow[]>();
+  for (const note of notes) {
+    if (!groups.has(note.notebook)) groups.set(note.notebook, []);
+    groups.get(note.notebook)!.push(note);
+  }
+  return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+}
+
 /* ---------- HTML (print → Save as PDF) ---------- */
 
 const PRINT_STYLES = `
@@ -77,8 +88,13 @@ const PRINT_STYLES = `
   h1 { font-size: 26px; margin: 0 0 4px; }
   .doc-meta { color: #71717a; font-size: 13px; margin: 0 0 8px;
     font-family: ui-sans-serif, system-ui, sans-serif; }
+  .notebook-heading {
+    break-before: page; font-size: 22px; margin: 0 0 4px;
+    padding-bottom: 6px; border-bottom: 2px solid #18181b;
+  }
+  .notebook-heading:first-of-type { break-before: avoid; }
   .note { break-before: page; padding-top: 8px; }
-  .note:first-of-type { break-before: avoid; }
+  .note.first-in-group { break-before: avoid; }
   .note-title { font-size: 21px; margin: 0 0 2px; border-bottom: 1px solid #e4e4e7; padding-bottom: 6px; }
   .note-meta { color: #71717a; font-size: 12px; margin: 0 0 14px;
     font-family: ui-sans-serif, system-ui, sans-serif; }
@@ -106,31 +122,43 @@ function renderBody(markdown: string): string {
 async function buildHtml(
   supabase: SupabaseClient,
   notes: NoteRow[],
+  heading: string,
   stamp: string,
 ): Promise<string> {
+  const groups = groupByNotebook(notes);
+  const showNotebookHeadings = groups.length > 1;
   const sections: string[] = [];
 
-  for (const note of notes) {
-    const figures = (note.figures ?? []).filter((f) => f.imagePath);
-    const figureHtml: string[] = [];
-
-    for (const fig of figures) {
-      const bytes = await figureBytes(supabase, fig.imagePath!);
-      if (!bytes) continue;
-      const src = `data:image/jpeg;base64,${bytes.toString("base64")}`;
-      figureHtml.push(
-        `<figure><img src="${src}" alt="${escapeHtml(escapeAlt(fig.caption))}" /><figcaption>${escapeHtml(fig.caption)}</figcaption></figure>`,
+  for (const [notebook, groupNotes] of groups) {
+    if (showNotebookHeadings) {
+      sections.push(
+        `<h2 class="notebook-heading">${escapeHtml(notebook)}</h2>`,
       );
     }
 
-    sections.push(
-      `<section class="note">
-        <h2 class="note-title">${escapeHtml(note.title)}</h2>
-        <p class="note-meta">${formatDate(note.created_at)}</p>
-        <div class="body">${renderBody(note.markdown)}</div>
-        ${figureHtml.length ? `<div class="figures">${figureHtml.join("\n")}</div>` : ""}
-      </section>`,
-    );
+    for (let i = 0; i < groupNotes.length; i++) {
+      const note = groupNotes[i];
+      const figures = (note.figures ?? []).filter((f) => f.imagePath);
+      const figureHtml: string[] = [];
+
+      for (const fig of figures) {
+        const bytes = await figureBytes(supabase, fig.imagePath!);
+        if (!bytes) continue;
+        const src = `data:image/jpeg;base64,${bytes.toString("base64")}`;
+        figureHtml.push(
+          `<figure><img src="${src}" alt="${escapeHtml(escapeAlt(fig.caption))}" /><figcaption>${escapeHtml(fig.caption)}</figcaption></figure>`,
+        );
+      }
+
+      sections.push(
+        `<section class="note${i === 0 ? " first-in-group" : ""}">
+          <h3 class="note-title">${escapeHtml(note.title)}</h3>
+          <p class="note-meta">${formatDate(note.created_at)}</p>
+          <div class="body">${renderBody(note.markdown)}</div>
+          ${figureHtml.length ? `<div class="figures">${figureHtml.join("\n")}</div>` : ""}
+        </section>`,
+      );
+    }
   }
 
   return `<!doctype html>
@@ -138,7 +166,7 @@ async function buildHtml(
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>My Notes — boringtools</title>
+<title>${escapeHtml(heading)} — boringtools</title>
 <style>${PRINT_STYLES}</style>
 </head>
 <body>
@@ -146,14 +174,14 @@ async function buildHtml(
     <span class="t">Use “Save as PDF” as the destination in the print dialog.</span>
     <button onclick="window.print()">Save as PDF</button>
   </div>
-  <h1>My Notes</h1>
+  <h1>${escapeHtml(heading)}</h1>
   <p class="doc-meta">Exported ${stamp} · ${notes.length} note${notes.length > 1 ? "s" : ""}</p>
   ${sections.join("\n")}
 </body>
 </html>`;
 }
 
-/* ---------- ZIP (markdown + image files) ---------- */
+/* ---------- ZIP (markdown + image files, grouped by notebook) ---------- */
 
 async function buildZip(
   supabase: SupabaseClient,
@@ -162,27 +190,33 @@ async function buildZip(
 ): Promise<Buffer> {
   const zip = new JSZip();
   const root = zip.folder(`boringtools-notes-${stamp}`)!;
+  const groups = groupByNotebook(notes);
 
-  for (let i = 0; i < notes.length; i++) {
-    const note = notes[i];
-    const folderName = `${String(i + 1).padStart(2, "0")}-${slugify(note.title)}`;
-    const folder = root.folder(folderName)!;
-    const figures = (note.figures ?? []).filter((f) => f.imagePath);
+  for (const [notebook, groupNotes] of groups) {
+    const notebookFolder = root.folder(slugify(notebook))!;
 
-    let md = `# ${note.title}\n\n*${formatDate(note.created_at)}*\n\n${(note.markdown ?? "").trim()}\n`;
+    for (let i = 0; i < groupNotes.length; i++) {
+      const note = groupNotes[i];
+      const folder = notebookFolder.folder(
+        `${String(i + 1).padStart(2, "0")}-${slugify(note.title)}`,
+      )!;
+      const figures = (note.figures ?? []).filter((f) => f.imagePath);
 
-    if (figures.length > 0) {
-      md += `\n## Figures\n\n`;
-      for (let j = 0; j < figures.length; j++) {
-        const fig = figures[j];
-        const fileName = `${j}.jpg`;
-        md += `![${escapeAlt(fig.caption)}](figures/${fileName})\n\n*${fig.caption}*\n\n`;
-        const bytes = await figureBytes(supabase, fig.imagePath!);
-        if (bytes) folder.folder("figures")!.file(fileName, bytes);
+      let md = `# ${note.title}\n\n*${formatDate(note.created_at)}*\n\n${(note.markdown ?? "").trim()}\n`;
+
+      if (figures.length > 0) {
+        md += `\n## Figures\n\n`;
+        for (let j = 0; j < figures.length; j++) {
+          const fig = figures[j];
+          const fileName = `${j}.jpg`;
+          md += `![${escapeAlt(fig.caption)}](figures/${fileName})\n\n*${fig.caption}*\n\n`;
+          const bytes = await figureBytes(supabase, fig.imagePath!);
+          if (bytes) folder.folder("figures")!.file(fileName, bytes);
+        }
       }
-    }
 
-    folder.file("note.md", md);
+      folder.file("note.md", md);
+    }
   }
 
   return zip.generateAsync({ type: "nodebuffer" });
@@ -192,7 +226,10 @@ async function buildZip(
 
 export async function GET(request: Request) {
   try {
-    const format = new URL(request.url).searchParams.get("format") ?? "zip";
+    const params = new URL(request.url).searchParams;
+    const format = params.get("format") ?? "zip";
+    const notebookFilter = params.get("notebook");
+    const noteFilter = params.get("note");
 
     const supabase = await createClient();
     const {
@@ -207,11 +244,18 @@ export async function GET(request: Request) {
       );
     }
 
-    const { data: rows, error: listError } = await supabase
+    let query = supabase
       .from("notes")
-      .select("id, title, markdown, figures, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .select("id, title, markdown, figures, notebook, created_at")
+      .eq("user_id", user.id);
+
+    // Scope: a single note, a single notebook, or everything.
+    if (noteFilter) query = query.eq("id", noteFilter);
+    else if (notebookFilter) query = query.eq("notebook", notebookFilter);
+
+    const { data: rows, error: listError } = await query.order("created_at", {
+      ascending: false,
+    });
 
     if (listError) {
       console.error("Export list error:", listError);
@@ -224,16 +268,26 @@ export async function GET(request: Request) {
     const notes = (rows ?? []) as NoteRow[];
     if (notes.length === 0) {
       return NextResponse.json(
-        { error: "You have no saved notes to export." },
+        { error: "Nothing to export." },
         { status: 400 },
       );
     }
 
     const stamp = new Date().toISOString().slice(0, 10);
 
+    // Scope label drives the document heading and download filename.
+    let heading = "My Notes";
+    let baseName = "notes";
+    if (noteFilter) {
+      heading = notes[0].title;
+      baseName = slugify(notes[0].title);
+    } else if (notebookFilter) {
+      heading = notebookFilter;
+      baseName = slugify(notebookFilter);
+    }
+
     if (format === "html") {
-      const html = await buildHtml(supabase, notes, stamp);
-      // Inline so it opens in a tab ready to "Save as PDF".
+      const html = await buildHtml(supabase, notes, heading, stamp);
       return new NextResponse(html, {
         status: 200,
         headers: {
@@ -248,7 +302,7 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename="boringtools-notes-${stamp}.zip"`,
+        "Content-Disposition": `attachment; filename="boringtools-${baseName}-${stamp}.zip"`,
         "Cache-Control": "no-store",
       },
     });

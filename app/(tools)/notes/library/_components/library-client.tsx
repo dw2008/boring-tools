@@ -172,7 +172,21 @@ function NoteDetail({
             )}
           </div>
         </div>
-        <div className="flex flex-none items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              window.open(
+                `/api/notes/export?format=html&note=${note.id}`,
+                "_blank",
+              )
+            }
+            title="Save this note as a PDF"
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Save as PDF
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -338,43 +352,15 @@ export function LibraryClient() {
     }
   };
 
-  const hasNotes = status === "ready" && !!data && data.notes.length > 0;
-
   const header = (
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">My Notes</h2>
-        <p className="text-muted-foreground">
-          Your saved digitized notes.{" "}
-          <Link href="/notes" className="underline hover:text-foreground">
-            Digitize a new one →
-          </Link>
-        </p>
-      </div>
-      {hasNotes && (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.open("/api/notes/export?format=html", "_blank")}
-            title="Open a print-ready page with images embedded — choose “Save as PDF” in the print dialog"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Save as PDF
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              window.location.href = "/api/notes/export";
-            }}
-            title="Download all notes as a ZIP of Markdown files and figure images"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Export ZIP
-          </Button>
-        </div>
-      )}
+    <div className="space-y-2">
+      <h2 className="text-3xl font-bold tracking-tight">My Notes</h2>
+      <p className="text-muted-foreground">
+        Your saved digitized notes.{" "}
+        <Link href="/notes" className="underline hover:text-foreground">
+          Digitize a new one →
+        </Link>
+      </p>
     </div>
   );
 
@@ -416,6 +402,12 @@ export function LibraryClient() {
   const selected =
     visibleNotes.find((n) => n.id === selectedId) ?? visibleNotes[0] ?? null;
 
+  // Export scope follows the active tab: "All" → everything, else that notebook.
+  const scopeQuery =
+    effectiveTab === "All" ? "" : `&notebook=${encodeURIComponent(effectiveTab)}`;
+  const scopeLabel =
+    effectiveTab === "All" ? "all notes" : `the “${effectiveTab}” notebook`;
+
   return (
     <>
       {header}
@@ -448,29 +440,53 @@ export function LibraryClient() {
 
       {status === "ready" && data && data.notes.length > 0 && (
         <div className="space-y-4">
-          {/* Notebook tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {["All", ...notebooks].map((tab) => {
-              const count =
-                tab === "All"
-                  ? data.notes.length
-                  : data.notes.filter((n) => n.notebook === tab).length;
-              const isActive = effectiveTab === tab;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-none rounded-full border px-3 py-1 text-sm transition-colors ${
-                    isActive
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  {tab}
-                  <span className="ml-1.5 text-xs opacity-70">{count}</span>
-                </button>
-              );
-            })}
+          {/* Notebook tabs + export scoped to the active tab */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 gap-2 overflow-x-auto pb-1">
+              {["All", ...notebooks].map((tab) => {
+                const count =
+                  tab === "All"
+                    ? data.notes.length
+                    : data.notes.filter((n) => n.notebook === tab).length;
+                const isActive = effectiveTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-none rounded-full border px-3 py-1 text-sm transition-colors ${
+                      isActive
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {tab}
+                    <span className="ml-1.5 text-xs opacity-70">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-none items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(`/api/notes/export?format=html${scopeQuery}`, "_blank")}
+                title={`Save ${scopeLabel} as a PDF`}
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Save as PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  window.location.href = `/api/notes/export?format=zip${scopeQuery}`;
+                }}
+                title={`Download ${scopeLabel} as a ZIP`}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export ZIP
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-col gap-6 md:flex-row md:items-start">
