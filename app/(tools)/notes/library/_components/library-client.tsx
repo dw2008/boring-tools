@@ -11,6 +11,8 @@ import {
   Copy,
   Check,
   ChevronLeft,
+  Download,
+  Printer,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { AuthModal } from "@/components/auth-modal";
@@ -243,15 +245,43 @@ export function LibraryClient() {
     }
   };
 
+  const hasNotes = status === "ready" && !!data && data.notes.length > 0;
+
   const header = (
-    <div className="space-y-2">
-      <h2 className="text-3xl font-bold tracking-tight">My Notes</h2>
-      <p className="text-muted-foreground">
-        Your saved digitized notes.{" "}
-        <Link href="/notes" className="underline hover:text-foreground">
-          Digitize a new one →
-        </Link>
-      </p>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">My Notes</h2>
+        <p className="text-muted-foreground">
+          Your saved digitized notes.{" "}
+          <Link href="/notes" className="underline hover:text-foreground">
+            Digitize a new one →
+          </Link>
+        </p>
+      </div>
+      {hasNotes && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open("/api/notes/export?format=html", "_blank")}
+            title="Open a print-ready page with images embedded — choose “Save as PDF” in the print dialog"
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Save as PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              window.location.href = "/api/notes/export";
+            }}
+            title="Download all notes as a ZIP of Markdown files and figure images"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export ZIP
+          </Button>
+        </div>
+      )}
     </div>
   );
 
