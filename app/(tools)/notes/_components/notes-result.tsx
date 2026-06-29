@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { Components } from "react-markdown";
-import { Copy, Check, RotateCcw } from "lucide-react";
+import { Copy, Check, RotateCcw, Save, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { Note } from "@/lib/tools/notes/types";
+import type { SaveState } from "./notes-client";
 
 const markdownComponents: Components = {
   h1: ({ children }) => (
@@ -77,9 +79,24 @@ interface NotesResultProps {
   // Markdown with cropped figure images inlined; falls back to note.markdown.
   displayMarkdown: string;
   onReset: () => void;
+  // Re-run the digitizer on the same uploaded image.
+  onRetry: () => void;
+  isProcessing: boolean;
+  onSave: () => void;
+  saveState: SaveState;
+  saveError: string | null;
 }
 
-export function NotesResult({ note, displayMarkdown, onReset }: NotesResultProps) {
+export function NotesResult({
+  note,
+  displayMarkdown,
+  onReset,
+  onRetry,
+  isProcessing,
+  onSave,
+  saveState,
+  saveError,
+}: NotesResultProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -95,6 +112,31 @@ export function NotesResult({ note, displayMarkdown, onReset }: NotesResultProps
           {note.title}
         </CardTitle>
         <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSave}
+            disabled={
+              isProcessing || saveState === "saving" || saveState === "saved"
+            }
+          >
+            {saveState === "saving" ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving
+              </>
+            ) : saveState === "saved" ? (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                Saved
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save
+              </>
+            )}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleCopy}>
             {copied ? (
               <>
@@ -108,6 +150,24 @@ export function NotesResult({ note, displayMarkdown, onReset }: NotesResultProps
               </>
             )}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            disabled={isProcessing || saveState === "saving"}
+          >
+            {isProcessing ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Retrying
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Retry
+              </>
+            )}
+          </Button>
           <Button variant="ghost" size="sm" onClick={onReset}>
             <RotateCcw className="mr-2 h-4 w-4" />
             New
@@ -115,6 +175,20 @@ export function NotesResult({ note, displayMarkdown, onReset }: NotesResultProps
         </div>
       </CardHeader>
       <CardContent>
+        {saveState === "error" && saveError && (
+          <p className="mb-3 text-sm text-destructive">{saveError}</p>
+        )}
+        {saveState === "saved" && (
+          <p className="mb-3 text-sm text-muted-foreground">
+            Saved to your library.{" "}
+            <Link
+              href="/notes/library"
+              className="underline hover:text-foreground"
+            >
+              View my notes →
+            </Link>
+          </p>
+        )}
         <div className="text-sm">
           <ReactMarkdown
             components={markdownComponents}

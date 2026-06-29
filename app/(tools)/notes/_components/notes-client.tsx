@@ -3,10 +3,20 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { AuthModal } from "@/components/auth-modal";
-import type { DigitizeResponse, Note } from "@/lib/tools/notes/types";
+import type {
+  DigitizeResponse,
+  Note,
+  SaveNoteResponse,
+} from "@/lib/tools/notes/types";
 import { NotesUpload } from "./notes-upload";
 import { NotesResult } from "./notes-result";
-import { toCleanMarkdown, toDisplayMarkdown } from "./figures";
+import {
+  toCleanMarkdown,
+  toDisplayMarkdown,
+  cropFiguresToBlobs,
+} from "./figures";
+
+export type SaveState = "idle" | "saving" | "saved" | "error";
 
 export function NotesClient() {
   const { user } = useAuth();
@@ -20,6 +30,8 @@ export function NotesClient() {
   const [error, setError] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Manage object URL lifecycle for the selected image preview
   useEffect(() => {
@@ -38,6 +50,8 @@ export function NotesClient() {
     if (displayMarkdown) setDisplayMarkdown(null);
     if (error) setError(null);
     if (limitReached) setLimitReached(false);
+    setSaveState("idle");
+    setSaveError(null);
   };
 
   const handleReset = () => {
@@ -46,6 +60,8 @@ export function NotesClient() {
     setDisplayMarkdown(null);
     setError(null);
     setLimitReached(false);
+    setSaveState("idle");
+    setSaveError(null);
   };
 
   const handleSubmit = async () => {
@@ -58,6 +74,9 @@ export function NotesClient() {
 
     setIsProcessing(true);
     setError(null);
+    // A fresh (or retried) digitization invalidates any prior save.
+    setSaveState("idle");
+    setSaveError(null);
 
     try {
       const formData = new FormData();
@@ -106,6 +125,74 @@ export function NotesClient() {
     }
   };
 
+  const handleSave = async () => {
+    if (!file || !note) return;
+
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    setSaveState("saving");
+    setSaveError(null);
+
+    try {
+      // Re-crop each figure to a JPEG blob for upload alongside the metadata.
+      const blobs = await cropFiguresToBlobs(file, note.figures);
+
+      const formData = new FormData();
+      formData.append(
+        "note",
+        JSON.stringify({
+          title: note.title,
+          markdown: note.markdown,
+          topic: note.topic,
+          figures: (note.figures ?? []).map(({ token, caption, labels, box }) => ({
+            token,
+            caption,
+            labels,
+            box,
+          })),
+        }),
+      );
+      for (const [token, blob] of blobs) {
+        formData.append(`figure:${token}`, blob, "figure.jpg");
+      }
+
+      const response = await fetch("/api/notes/save", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+
+        if (response.status === 401) {
+          setSaveState("idle");
+          setAuthModalOpen(true);
+          return;
+        }
+
+        // 403 = saved-notes count or storage cap reached.
+        setSaveError(
+          data.error ||
+            (response.status === 403
+              ? "You've reached your saved-notes limit."
+              : "Couldn't save this note. Please try again."),
+        );
+        setSaveState("error");
+        return;
+      }
+
+      const data: SaveNoteResponse = await response.json();
+      setNote(data.note); // persisted note (id, figure image paths, createdAt)
+      setSaveState("saved");
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Something went wrong");
+      setSaveState("error");
+    }
+  };
+
   return (
     <div className="grid gap-8">
       {!note && (
@@ -148,6 +235,11 @@ export function NotesClient() {
           note={note}
           displayMarkdown={displayMarkdown ?? note.markdown}
           onReset={handleReset}
+          onRetry={handleSubmit}
+          isProcessing={isProcessing}
+          onSave={handleSave}
+          saveState={saveState}
+          saveError={saveError}
         />
       )}
       <AuthModal

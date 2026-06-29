@@ -35,10 +35,13 @@ export function toCleanMarkdown(
   return out;
 }
 
-function cropToDataUrl(
+// Crop a figure's region out of the source bitmap onto a canvas. Returns null
+// when the region is degenerate (too small). Shared by the data-URL (display)
+// and Blob (save) producers below.
+function cropCanvas(
   bitmap: ImageBitmap,
   box: Figure["box"],
-): string | null {
+): HTMLCanvasElement | null {
   const W = bitmap.width;
   const H = bitmap.height;
 
@@ -71,7 +74,23 @@ function cropToDataUrl(
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, sw, sh);
-  return canvas.toDataURL("image/jpeg", 0.85);
+  return canvas;
+}
+
+function cropToDataUrl(bitmap: ImageBitmap, box: Figure["box"]): string | null {
+  const canvas = cropCanvas(bitmap, box);
+  return canvas ? canvas.toDataURL("image/jpeg", 0.85) : null;
+}
+
+function cropToBlob(
+  bitmap: ImageBitmap,
+  box: Figure["box"],
+): Promise<Blob | null> {
+  const canvas = cropCanvas(bitmap, box);
+  if (!canvas) return Promise.resolve(null);
+  return new Promise((resolve) =>
+    canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.85),
+  );
 }
 
 const escapeAlt = (s: string) => s.replace(/[[\]\n]/g, " ").trim();
@@ -106,4 +125,31 @@ export async function toDisplayMarkdown(
   }
   bitmap.close?.();
   return out;
+}
+
+/**
+ * Crops each figure region out of the original image as a JPEG Blob, keyed by
+ * the figure's token. Used when saving a note so the crops can be uploaded to
+ * Storage. Figures whose region can't be cropped are simply omitted.
+ */
+export async function cropFiguresToBlobs(
+  file: File,
+  figures: Figure[] | undefined,
+): Promise<Map<string, Blob>> {
+  const result = new Map<string, Blob>();
+  if (!figures?.length) return result;
+
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch {
+    return result;
+  }
+
+  for (const fig of figures) {
+    const blob = await cropToBlob(bitmap, fig.box);
+    if (blob) result.set(fig.token, blob);
+  }
+  bitmap.close?.();
+  return result;
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PenTool, Code, Crown, ScanLine } from "lucide-react";
+import { PenTool, Code, Crown, ScanLine, Library } from "lucide-react";
 import { UserMenu } from "@/components/user-menu";
 
 export function Header() {
@@ -35,10 +35,18 @@ export function Header() {
           </Link>
           <Link
             href="/notes"
+            title="Scan a page or handwritten notes into Markdown"
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ScanLine className="h-4 w-4" />
-            Notes
+            Scan Notes
+          </Link>
+          <Link
+            href="/notes/library"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Library className="h-4 w-4" />
+            My Notes
           </Link>
           <UserMenu />
         </nav>
