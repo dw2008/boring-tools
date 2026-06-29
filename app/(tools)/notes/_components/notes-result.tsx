@@ -85,6 +85,10 @@ interface NotesResultProps {
   onSave: () => void;
   saveState: SaveState;
   saveError: string | null;
+  // Notebook the note will be saved into, plus existing names for suggestions.
+  notebook: string;
+  notebooks: string[];
+  onNotebookChange: (value: string) => void;
 }
 
 export function NotesResult({
@@ -96,6 +100,9 @@ export function NotesResult({
   onSave,
   saveState,
   saveError,
+  notebook,
+  notebooks,
+  onNotebookChange,
 }: NotesResultProps) {
   const [copied, setCopied] = useState(false);
 
@@ -112,6 +119,28 @@ export function NotesResult({
           {note.title}
         </CardTitle>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <label
+              htmlFor="notebook"
+              className="text-xs text-muted-foreground"
+            >
+              Notebook
+            </label>
+            <input
+              id="notebook"
+              list="notebook-options"
+              value={notebook}
+              onChange={(e) => onNotebookChange(e.target.value)}
+              disabled={saveState === "saving" || saveState === "saved"}
+              placeholder="Unsorted"
+              className="h-8 w-32 rounded-md border bg-background px-2 text-sm disabled:opacity-60"
+            />
+            <datalist id="notebook-options">
+              {notebooks.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -137,18 +166,9 @@ export function NotesResult({
               </>
             )}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleCopy}>
-            {copied ? (
-              <>
-                <Check className="mr-2 h-4 w-4" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy Markdown
-              </>
-            )}
+          <Button variant="ghost" size="sm" onClick={onReset}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            New Scan
           </Button>
           <Button
             variant="outline"
@@ -168,9 +188,18 @@ export function NotesResult({
               </>
             )}
           </Button>
-          <Button variant="ghost" size="sm" onClick={onReset}>
-            <RotateCcw className="mr-2 h-4 w-4" />
-            New
+          <Button variant="outline" size="sm" onClick={handleCopy}>
+            {copied ? (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy Markdown
+              </>
+            )}
           </Button>
         </div>
       </CardHeader>

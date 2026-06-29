@@ -26,6 +26,7 @@ const saveSchema = z.object({
   title: z.string().min(1).max(120),
   markdown: z.string().min(1).max(100_000),
   topic: z.string().max(120).optional(),
+  notebook: z.string().trim().max(60).optional(),
   figures: z.array(figureMetaSchema).default([]),
 });
 
@@ -92,7 +93,8 @@ export async function POST(request: Request) {
     }
 
     // 3. Collect + validate the figure image files (one per figure token)
-    const { title, markdown, topic, figures } = parsed.data;
+    const { title, markdown, topic, notebook, figures } = parsed.data;
+    const notebookName = notebook?.trim() || "Unsorted";
     const fileByToken = new Map<string, File>();
     let incomingBytes = 0;
 
@@ -234,9 +236,10 @@ export async function POST(request: Request) {
         markdown,
         figures: storedFigures,
         topic: topic ?? null,
+        notebook: notebookName,
         size_bytes: incomingBytes,
       })
-      .select("id, title, markdown, figures, topic, created_at")
+      .select("id, title, markdown, figures, topic, notebook, created_at")
       .single();
 
     if (insertError || !inserted) {

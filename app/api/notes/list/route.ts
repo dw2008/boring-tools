@@ -31,7 +31,7 @@ export async function GET() {
     // 1. Fetch the user's notes (RLS confines this to their own rows).
     const { data: rows, error: listError } = await supabase
       .from("notes")
-      .select("id, title, markdown, figures, topic, size_bytes, created_at")
+      .select("id, title, markdown, figures, topic, notebook, size_bytes, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -74,6 +74,7 @@ export async function GET() {
         markdown: row.markdown,
         figures,
         topic: row.topic ?? undefined,
+        notebook: row.notebook ?? "Unsorted",
         createdAt: row.created_at,
         sizeBytes: row.size_bytes ?? 0,
       };

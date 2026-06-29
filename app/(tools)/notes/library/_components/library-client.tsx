@@ -85,15 +85,27 @@ function NoteListRow({
 
 function NoteDetail({
   note,
+  notebooks,
+  onMove,
+  moving,
   onDelete,
   deleting,
 }: {
   note: SavedNote;
+  notebooks: string[];
+  onMove: (id: string, notebook: string) => void;
+  moving: boolean;
   onDelete: (id: string) => void;
   deleting: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+  const [moveTo, setMoveTo] = useState(note.notebook);
+  const [newMode, setNewMode] = useState(false);
+  const [newName, setNewName] = useState("");
   const figures = note.figures.filter((f) => f.imageUrl);
+
+  const target = (newMode ? newName : moveTo).trim();
+  const canMove = !moving && target.length > 0 && target !== note.notebook;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(note.markdown);
@@ -109,6 +121,56 @@ function NoteDetail({
           <p className="mt-0.5 text-xs text-muted-foreground">
             {formatDate(note.createdAt)} · {figureMeta(note)}
           </p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Notebook</span>
+            {newMode ? (
+              <input
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="New notebook name"
+                className="h-7 w-44 rounded-md border bg-background px-2 text-xs"
+              />
+            ) : (
+              <select
+                value={moveTo}
+                onChange={(e) => {
+                  if (e.target.value === "__new__") {
+                    setNewMode(true);
+                    setNewName("");
+                  } else {
+                    setMoveTo(e.target.value);
+                  }
+                }}
+                className="h-7 rounded-md border bg-background px-2 text-xs"
+              >
+                {notebooks.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+                <option value="__new__">+ New notebook…</option>
+              </select>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              disabled={!canMove}
+              onClick={() => onMove(note.id, target)}
+            >
+              {moving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Move"}
+            </Button>
+            {newMode && (
+              <button
+                type="button"
+                onClick={() => setNewMode(false)}
+                className="text-xs text-muted-foreground underline hover:text-foreground"
+              >
+                cancel
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex flex-none items-center gap-2">
           <Button
@@ -180,6 +242,8 @@ export function LibraryClient() {
   const [data, setData] = useState<NotesListResponse | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("All");
   const [authModalOpen, setAuthModalOpen] = useState(false);
   // On mobile the list and detail are separate views; this toggles between
   // them. On md+ both panes are always visible and this is ignored.
@@ -245,6 +309,35 @@ export function LibraryClient() {
     }
   };
 
+  const handleMove = async (id: string, notebook: string) => {
+    setMovingId(id);
+    try {
+      const res = await fetch(`/api/notes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notebook }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to move note.");
+      }
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              notes: prev.notes.map((n) =>
+                n.id === id ? { ...n, notebook } : n,
+              ),
+            }
+          : prev,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to move note.");
+    } finally {
+      setMovingId(null);
+    }
+  };
+
   const hasNotes = status === "ready" && !!data && data.notes.length > 0;
 
   const header = (
@@ -307,7 +400,21 @@ export function LibraryClient() {
     );
   }
 
-  const selected = data?.notes.find((n) => n.id === selectedId) ?? null;
+  // Tabs = "All" + the distinct notebooks across the user's notes.
+  const notebooks = data
+    ? Array.from(new Set(data.notes.map((n) => n.notebook))).sort((a, b) =>
+        a.localeCompare(b),
+      )
+    : [];
+  const effectiveTab =
+    activeTab !== "All" && notebooks.includes(activeTab) ? activeTab : "All";
+  const visibleNotes = data
+    ? effectiveTab === "All"
+      ? data.notes
+      : data.notes.filter((n) => n.notebook === effectiveTab)
+    : [];
+  const selected =
+    visibleNotes.find((n) => n.id === selectedId) ?? visibleNotes[0] ?? null;
 
   return (
     <>
@@ -340,54 +447,85 @@ export function LibraryClient() {
       )}
 
       {status === "ready" && data && data.notes.length > 0 && (
-        <div className="flex flex-col gap-6 md:flex-row md:items-start">
-          {/* Left: scrollable list. On mobile, hidden while a note is open. */}
-          <aside
-            className={`${
-              mobileDetailOpen ? "hidden md:block" : "block"
-            } md:w-72 md:flex-none lg:w-80`}
-          >
-            <UsageMeter usage={data.usage} />
-            <div className="mt-3 space-y-1 md:max-h-[calc(100vh-240px)] md:overflow-y-auto md:pr-1">
-              {data.notes.map((note) => (
-                <NoteListRow
-                  key={note.id}
-                  note={note}
-                  active={note.id === selectedId}
-                  onSelect={() => {
-                    setSelectedId(note.id);
-                    setMobileDetailOpen(true);
-                  }}
-                />
-              ))}
-            </div>
-          </aside>
+        <div className="space-y-4">
+          {/* Notebook tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {["All", ...notebooks].map((tab) => {
+              const count =
+                tab === "All"
+                  ? data.notes.length
+                  : data.notes.filter((n) => n.notebook === tab).length;
+              const isActive = effectiveTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-none rounded-full border px-3 py-1 text-sm transition-colors ${
+                    isActive
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {tab}
+                  <span className="ml-1.5 text-xs opacity-70">{count}</span>
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Right: opened note. On mobile, shown only after a note is tapped. */}
-          <section
-            className={`${
-              mobileDetailOpen ? "block" : "hidden md:block"
-            } min-w-0 flex-1`}
-          >
-            <button
-              onClick={() => setMobileDetailOpen(false)}
-              className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors md:hidden"
+          <div className="flex flex-col gap-6 md:flex-row md:items-start">
+            {/* Left: scrollable list. On mobile, hidden while a note is open. */}
+            <aside
+              className={`${
+                mobileDetailOpen ? "hidden md:block" : "block"
+              } md:w-72 md:flex-none lg:w-80`}
             >
-              <ChevronLeft className="h-4 w-4" />
-              All notes
-            </button>
-            {selected ? (
-              <NoteDetail
-                note={selected}
-                onDelete={handleDelete}
-                deleting={deletingId === selected.id}
-              />
-            ) : (
-              <div className="rounded-xl border border-dashed py-16 text-center text-sm text-muted-foreground">
-                Select a note to read it.
+              <UsageMeter usage={data.usage} />
+              <div className="mt-3 space-y-1 md:max-h-[calc(100vh-260px)] md:overflow-y-auto md:pr-1">
+                {visibleNotes.map((note) => (
+                  <NoteListRow
+                    key={note.id}
+                    note={note}
+                    active={note.id === selected?.id}
+                    onSelect={() => {
+                      setSelectedId(note.id);
+                      setMobileDetailOpen(true);
+                    }}
+                  />
+                ))}
               </div>
-            )}
-          </section>
+            </aside>
+
+            {/* Right: opened note. On mobile, shown only after a note is tapped. */}
+            <section
+              className={`${
+                mobileDetailOpen ? "block" : "hidden md:block"
+              } min-w-0 flex-1`}
+            >
+              <button
+                onClick={() => setMobileDetailOpen(false)}
+                className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors md:hidden"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                All notes
+              </button>
+              {selected ? (
+                <NoteDetail
+                  key={selected.id}
+                  note={selected}
+                  notebooks={notebooks}
+                  onMove={handleMove}
+                  moving={movingId === selected.id}
+                  onDelete={handleDelete}
+                  deleting={deletingId === selected.id}
+                />
+              ) : (
+                <div className="rounded-xl border border-dashed py-16 text-center text-sm text-muted-foreground">
+                  Select a note to read it.
+                </div>
+              )}
+            </section>
+          </div>
         </div>
       )}
     </>

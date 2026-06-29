@@ -33,6 +33,7 @@ export interface SavedNote {
   markdown: string;
   figures: Figure[];
   topic?: string;
+  notebook: string;
   createdAt: string;
   sizeBytes: number;
 }

@@ -32,6 +32,9 @@ export function NotesClient() {
   const [limitReached, setLimitReached] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Which notebook a saved note goes into; defaults to "Unsorted".
+  const [notebook, setNotebook] = useState("Unsorted");
+  const [notebooks, setNotebooks] = useState<string[]>([]);
 
   // Manage object URL lifecycle for the selected image preview
   useEffect(() => {
@@ -43,6 +46,18 @@ export function NotesClient() {
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  // Load the user's existing notebook names to offer as save suggestions.
+  useEffect(() => {
+    if (!user) {
+      setNotebooks([]);
+      return;
+    }
+    fetch("/api/notes/notebooks")
+      .then((res) => (res.ok ? res.json() : { notebooks: [] }))
+      .then((data) => setNotebooks(data.notebooks ?? []))
+      .catch(() => setNotebooks([]));
+  }, [user]);
 
   const handleFileSelected = (next: File | null) => {
     setFile(next);
@@ -147,6 +162,7 @@ export function NotesClient() {
           title: note.title,
           markdown: note.markdown,
           topic: note.topic,
+          notebook: notebook.trim() || "Unsorted",
           figures: (note.figures ?? []).map(({ token, caption, labels, box }) => ({
             token,
             caption,
@@ -240,6 +256,9 @@ export function NotesClient() {
           onSave={handleSave}
           saveState={saveState}
           saveError={saveError}
+          notebook={notebook}
+          notebooks={notebooks}
+          onNotebookChange={setNotebook}
         />
       )}
       <AuthModal
