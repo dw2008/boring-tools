@@ -33,7 +33,7 @@ const plans: Plan[] = [
     price: "$0",
     period: "",
     description: "Try it out",
-    features: ["5 proofreads per month", "3 interview sessions per month", "1 chess game per month", "Grammar & style fixes"],
+    features: ["5 proofreads per month", "3 interview sessions per month", "1 chess game per month", "3 note scans per month", "Save 30 notes (50 MB) in notebooks", "PDF & ZIP export", "Grammar & style fixes"],
   },
   {
     name: "Basic",
@@ -41,7 +41,7 @@ const plans: Plan[] = [
     price: "$1.99",
     period: "/month",
     description: "For regular use",
-    features: ["200 proofreads per month", "50 interview sessions per month", "15 chess games per month", "Grammar & style fixes"],
+    features: ["200 proofreads per month", "50 interview sessions per month", "15 chess games per month", "50 note scans per month", "Save 600 notes (1 GB) in notebooks", "PDF & ZIP export", "Grammar & style fixes"],
   },
   {
     name: "Pro",
@@ -49,7 +49,7 @@ const plans: Plan[] = [
     price: "$5.99",
     period: "/month",
     description: "Unlimited access",
-    features: ["Unlimited proofreads", "Unlimited interview sessions", "Unlimited chess games", "Grammar & style fixes"],
+    features: ["Unlimited proofreads", "Unlimited interview sessions", "Unlimited chess games", "Unlimited note scans", "Unlimited saved notes (10 GB) in notebooks", "PDF & ZIP export", "Grammar & style fixes"],
     highlight: true,
     badge: "Best value",
   },
