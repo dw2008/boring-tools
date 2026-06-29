@@ -10,6 +10,7 @@ import {
   FileText,
   Copy,
   Check,
+  ChevronLeft,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { AuthModal } from "@/components/auth-modal";
@@ -178,6 +179,9 @@ export function LibraryClient() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  // On mobile the list and detail are separate views; this toggles between
+  // them. On md+ both panes are always visible and this is ignored.
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   const load = useCallback(async () => {
     setStatus("loading");
@@ -222,6 +226,7 @@ export function LibraryClient() {
         const removed = prev.notes.find((n) => n.id === id);
         const remaining = prev.notes.filter((n) => n.id !== id);
         setSelectedId((cur) => (cur === id ? remaining[0]?.id ?? null : cur));
+        if (remaining.length === 0) setMobileDetailOpen(false);
         return {
           notes: remaining,
           usage: {
@@ -306,8 +311,12 @@ export function LibraryClient() {
 
       {status === "ready" && data && data.notes.length > 0 && (
         <div className="flex flex-col gap-6 md:flex-row md:items-start">
-          {/* Left: scrollable list */}
-          <aside className="md:w-72 md:flex-none lg:w-80">
+          {/* Left: scrollable list. On mobile, hidden while a note is open. */}
+          <aside
+            className={`${
+              mobileDetailOpen ? "hidden md:block" : "block"
+            } md:w-72 md:flex-none lg:w-80`}
+          >
             <UsageMeter usage={data.usage} />
             <div className="mt-3 space-y-1 md:max-h-[calc(100vh-240px)] md:overflow-y-auto md:pr-1">
               {data.notes.map((note) => (
@@ -315,14 +324,28 @@ export function LibraryClient() {
                   key={note.id}
                   note={note}
                   active={note.id === selectedId}
-                  onSelect={() => setSelectedId(note.id)}
+                  onSelect={() => {
+                    setSelectedId(note.id);
+                    setMobileDetailOpen(true);
+                  }}
                 />
               ))}
             </div>
           </aside>
 
-          {/* Right: opened note */}
-          <section className="min-w-0 flex-1">
+          {/* Right: opened note. On mobile, shown only after a note is tapped. */}
+          <section
+            className={`${
+              mobileDetailOpen ? "block" : "hidden md:block"
+            } min-w-0 flex-1`}
+          >
+            <button
+              onClick={() => setMobileDetailOpen(false)}
+              className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors md:hidden"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              All notes
+            </button>
             {selected ? (
               <NoteDetail
                 note={selected}

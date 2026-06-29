@@ -107,11 +107,11 @@ export function NotesResult({
 
   return (
     <Card className="border-2">
-      <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+      <CardHeader className="flex flex-col items-start gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <CardTitle className="text-base font-medium truncate">
           {note.title}
         </CardTitle>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
