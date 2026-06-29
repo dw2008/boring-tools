@@ -14,6 +14,48 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Check } from "lucide-react";
+import { PLAN_LIMITS, NOTE_LIBRARY_LIMITS } from "@/lib/stripe/plans";
+
+// Feature strings are derived from the enforced limits so the displayed
+// numbers can't drift from what the app actually allows.
+function monthlyLimit(n: number, singular: string, plural: string): string {
+  if (!Number.isFinite(n)) return `Unlimited ${plural}`;
+  return `${n} ${n === 1 ? singular : plural} per month`;
+}
+
+function formatStorage(bytes: number): string {
+  const GB = 1024 ** 3;
+  const MB = 1024 ** 2;
+  if (bytes >= GB) {
+    const gb = bytes / GB;
+    return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} GB`;
+  }
+  return `${Math.round(bytes / MB)} MB`;
+}
+
+function savedNotesFeature(tier: string): string {
+  const { savedNotes, storageBytes } = NOTE_LIBRARY_LIMITS[tier];
+  const storage = formatStorage(storageBytes);
+  return Number.isFinite(savedNotes)
+    ? `Save ${savedNotes} notes (${storage}) in notebooks`
+    : `Unlimited saved notes (${storage}) in notebooks`;
+}
+
+function tierFeatures(tier: string): string[] {
+  return [
+    monthlyLimit(PLAN_LIMITS.proofread[tier], "proofread", "proofreads"),
+    monthlyLimit(
+      PLAN_LIMITS.interview[tier],
+      "interview session",
+      "interview sessions",
+    ),
+    monthlyLimit(PLAN_LIMITS.chess[tier], "chess game", "chess games"),
+    monthlyLimit(PLAN_LIMITS.notes[tier], "note scan", "note scans"),
+    savedNotesFeature(tier),
+    "PDF & ZIP export",
+    "Grammar & style fixes",
+  ];
+}
 
 interface Plan {
   name: string;
@@ -33,7 +75,7 @@ const plans: Plan[] = [
     price: "$0",
     period: "",
     description: "Try it out",
-    features: ["5 proofreads per month", "3 interview sessions per month", "1 chess game per month", "3 note scans per month", "Save 30 notes (50 MB) in notebooks", "PDF & ZIP export", "Grammar & style fixes"],
+    features: tierFeatures("free"),
   },
   {
     name: "Basic",
@@ -41,7 +83,7 @@ const plans: Plan[] = [
     price: "$1.99",
     period: "/month",
     description: "For regular use",
-    features: ["200 proofreads per month", "50 interview sessions per month", "15 chess games per month", "50 note scans per month", "Save 600 notes (1 GB) in notebooks", "PDF & ZIP export", "Grammar & style fixes"],
+    features: tierFeatures("basic"),
   },
   {
     name: "Pro",
@@ -49,7 +91,7 @@ const plans: Plan[] = [
     price: "$5.99",
     period: "/month",
     description: "Unlimited access",
-    features: ["Unlimited proofreads", "Unlimited interview sessions", "Unlimited chess games", "Unlimited note scans", "Unlimited saved notes (10 GB) in notebooks", "PDF & ZIP export", "Grammar & style fixes"],
+    features: tierFeatures("pro"),
     highlight: true,
     badge: "Best value",
   },
