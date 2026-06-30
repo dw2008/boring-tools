@@ -105,6 +105,8 @@ export function NotesResult({
   onNotebookChange,
 }: NotesResultProps) {
   const [copied, setCopied] = useState(false);
+  const [newMode, setNewMode] = useState(false);
+  const saveLocked = saveState === "saving" || saveState === "saved";
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(note.markdown);
@@ -120,26 +122,56 @@ export function NotesResult({
         </CardTitle>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5">
-            <label
-              htmlFor="notebook"
-              className="text-xs text-muted-foreground"
-            >
+            <label htmlFor="notebook" className="text-xs text-muted-foreground">
               Notebook
             </label>
-            <input
-              id="notebook"
-              list="notebook-options"
-              value={notebook}
-              onChange={(e) => onNotebookChange(e.target.value)}
-              disabled={saveState === "saving" || saveState === "saved"}
-              placeholder="Unsorted"
-              className="h-8 w-32 rounded-md border bg-background px-2 text-sm disabled:opacity-60"
-            />
-            <datalist id="notebook-options">
-              {notebooks.map((n) => (
-                <option key={n} value={n} />
-              ))}
-            </datalist>
+            {newMode ? (
+              <>
+                <input
+                  id="notebook"
+                  autoFocus
+                  value={notebook}
+                  onChange={(e) => onNotebookChange(e.target.value)}
+                  disabled={saveLocked}
+                  placeholder="New notebook name"
+                  className="h-8 w-40 rounded-md border bg-background px-2 text-sm disabled:opacity-60"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewMode(false);
+                    onNotebookChange("Unsorted");
+                  }}
+                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                >
+                  cancel
+                </button>
+              </>
+            ) : (
+              <select
+                id="notebook"
+                value={notebook}
+                onChange={(e) => {
+                  if (e.target.value === "__new__") {
+                    setNewMode(true);
+                    onNotebookChange("");
+                  } else {
+                    onNotebookChange(e.target.value);
+                  }
+                }}
+                disabled={saveLocked}
+                className="h-8 rounded-md border bg-background px-2 text-sm disabled:opacity-60"
+              >
+                {Array.from(
+                  new Set(["Unsorted", notebook, ...notebooks].filter(Boolean)),
+                ).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+                <option value="__new__">+ New notebook…</option>
+              </select>
+            )}
           </div>
           <Button
             variant="outline"

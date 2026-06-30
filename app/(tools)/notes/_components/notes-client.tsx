@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { AuthModal } from "@/components/auth-modal";
 import type {
@@ -47,17 +47,18 @@ export function NotesClient() {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  // Load the user's existing notebook names to offer as save suggestions.
-  useEffect(() => {
-    if (!user) {
-      setNotebooks([]);
-      return;
-    }
+  // Load the user's existing notebook names to offer in the save dropdown.
+  const loadNotebooks = useCallback(() => {
     fetch("/api/notes/notebooks")
       .then((res) => (res.ok ? res.json() : { notebooks: [] }))
       .then((data) => setNotebooks(data.notebooks ?? []))
-      .catch(() => setNotebooks([]));
-  }, [user]);
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (user) loadNotebooks();
+    else setNotebooks([]);
+  }, [user, loadNotebooks]);
 
   const handleFileSelected = (next: File | null) => {
     setFile(next);
@@ -203,6 +204,7 @@ export function NotesClient() {
       const data: SaveNoteResponse = await response.json();
       setNote(data.note); // persisted note (id, figure image paths, createdAt)
       setSaveState("saved");
+      loadNotebooks(); // a brand-new notebook should appear for the next scan
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Something went wrong");
       setSaveState("error");
